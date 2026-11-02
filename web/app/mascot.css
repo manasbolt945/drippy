@@ -1,0 +1,125 @@
+/* Mascot moves: the "selfie session" from the design canvas.
+   Poses switch angles, heart eyes wobble, the phone flash pops, and it sparkles when happy. */
+
+.dm .m-star, .dm .m-eye, .dm .m-phone, .dm .m-flash, .dm .shine, .dm .halo {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.dm .m-flash, .dm .happy { opacity: 0; }
+
+/* One selfie session; --dm-loop sets its length, --dm-runs how many times it plays.
+   A screen can override both on its container (the splash plays one quick session). */
+:root { --dm-loop: 6.4s; --dm-runs: infinite; }
+.dm-session .m-star { animation: dm-poses var(--dm-loop) cubic-bezier(.45, .05, .3, 1.2) var(--dm-runs) both; }
+.dm-session .m-phone { animation: dm-phone-angle var(--dm-loop) ease-in-out var(--dm-runs) both; }
+.dm-session .m-flash { animation: dm-flashes var(--dm-loop) linear var(--dm-runs) both; }
+.dm-session .happy { animation: dm-happy-on var(--dm-loop) linear var(--dm-runs) both; }
+.dm-session .m-eye, .dm-celebrate .m-eye { animation: dm-wobble .9s ease-in-out infinite; }
+.dm-session .m-eye.r, .dm-celebrate .m-eye.r { animation-delay: .15s; }
+.dm .shine { animation: dm-flicker .9s ease-in-out infinite; }
+.dm .halo { animation: dm-halo 1.2s ease-in-out infinite; }
+.dm-flash-glow { animation: dm-glow-flash var(--dm-loop) linear var(--dm-runs) both; opacity: 0; }
+.dm-dance { animation: dm-dance var(--dm-loop) cubic-bezier(.45, .05, .3, 1.2) var(--dm-runs) both; }
+.dm-floor { animation: dm-floor var(--dm-loop) cubic-bezier(.45, .05, .3, 1.2) var(--dm-runs) both; }
+
+/* The score came back: happy bounce with the full shine. */
+.dm-celebrate .m-star { animation: dm-happy-bounce .9s ease-in-out infinite; }
+.dm-celebrate .happy { opacity: 1; transition: opacity .2s; }
+
+@keyframes dm-poses {
+  0% { transform: none; }
+  5%, 18% { transform: rotate(-13deg) translate(-2px, 0); }
+  23%, 37% { transform: rotate(12deg) translate(2px, -3px); }
+  42%, 57% { transform: scale(.88, 1) skewY(-6deg) translateY(1px); }
+  62%, 75% { transform: translateY(-6px) scale(1.04); }
+  80% { transform: translateY(0) scale(1.12, .88); }
+  85% { transform: translateY(-10px) scale(.94, 1.07); }
+  90% { transform: translateY(0) scale(1.06, .95); }
+  95%, 100% { transform: none; }
+}
+@keyframes dm-phone-angle {
+  0%, 100% { transform: none; }
+  5%, 18% { transform: rotate(-7deg); }
+  23%, 37% { transform: rotate(7deg) translateY(-1px); }
+  42%, 57% { transform: translateX(-1.5px) rotate(-3deg); }
+  62%, 75% { transform: translateY(-2.5px); }
+  80% { transform: none; }
+}
+@keyframes dm-flashes {
+  0%, 8%, 11%, 14%, 17%, 28%, 31%, 47%, 50%, 66%, 69%, 71%, 74%, 100% { opacity: 0; transform: scale(.4); }
+  9%, 10%, 15%, 16%, 29%, 30%, 48%, 49%, 67%, 68%, 72%, 73% { opacity: 1; transform: scale(1.15); }
+}
+@keyframes dm-glow-flash {
+  0%, 8%, 11%, 14%, 17%, 28%, 31%, 47%, 50%, 66%, 69%, 71%, 74%, 100% { opacity: 0; }
+  9%, 15%, 29%, 48%, 67%, 72% { opacity: .5; }
+}
+@keyframes dm-happy-on { 0%, 77% { opacity: 0; } 81%, 96% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes dm-wobble {
+  0%, 100% { transform: scale(1) rotate(0); }
+  20% { transform: scale(1.2, .82) rotate(-9deg); }
+  40% { transform: scale(.88, 1.14) rotate(7deg); }
+  60% { transform: scale(1.1, .92) rotate(-4deg); }
+  80% { transform: scale(.97, 1.04) rotate(2deg); }
+}
+@keyframes dm-flicker {
+  0%, 100% { opacity: 0; transform: scale(.3) rotate(0); }
+  30% { opacity: 1; transform: scale(1.15) rotate(20deg); }
+  55% { opacity: .35; transform: scale(.8) rotate(35deg); }
+  75% { opacity: 1; transform: scale(1) rotate(45deg); }
+}
+@keyframes dm-halo { 0%, 100% { opacity: .35; transform: scale(.92); } 50% { opacity: .8; transform: scale(1.06); } }
+@keyframes dm-happy-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  20% { transform: translateY(0) scale(1.1, .9); }
+  45% { transform: translateY(-8px) scale(.95, 1.06); }
+  70% { transform: translateY(0) scale(1.04, .97); }
+}
+@keyframes dm-dance {
+  0%, 100% { transform: translate(0, 0); }
+  5%, 18% { transform: translate(-46px, 6px); }
+  23%, 37% { transform: translate(46px, -10px); }
+  42%, 57% { transform: translate(-8px, 14px); }
+  62%, 75% { transform: translate(0, -34px); }
+  80% { transform: translate(0, 0); }
+  85% { transform: translate(0, -26px); }
+  90% { transform: translate(0, 0); }
+}
+@keyframes dm-floor {
+  0%, 100% { transform: translateX(0) scale(1); opacity: .55; }
+  5%, 18% { transform: translateX(-46px) scale(.95); opacity: .5; }
+  23%, 37% { transform: translateX(46px) scale(.85); opacity: .4; }
+  42%, 57% { transform: translateX(-8px) scale(1.05); opacity: .6; }
+  62%, 75% { transform: translateX(0) scale(.7); opacity: .3; }
+  85% { transform: scale(.75); opacity: .3; }
+}
+
+/* Splash captions change with each pose (same windows as the poses above). */
+.dm-cap { position: absolute; left: 0; right: 0; opacity: 0; }
+.dm-cap.c0 { animation: dm-cap0 var(--dm-loop) ease-out var(--dm-runs) both; }
+.dm-cap.c1 { animation: dm-cap1 var(--dm-loop) ease-out var(--dm-runs) both; }
+.dm-cap.c2 { animation: dm-cap2 var(--dm-loop) ease-out var(--dm-runs) both; }
+.dm-cap.c3 { animation: dm-cap3 var(--dm-loop) ease-out var(--dm-runs) both; }
+.dm-cap.c4 { animation: dm-cap4 var(--dm-loop) ease-out var(--dm-runs) both; }
+@keyframes dm-cap0 { 0% { opacity: 0; transform: translateY(6px); } 3%, 20% { opacity: 1; transform: none; } 22%, 100% { opacity: 0; transform: translateY(-6px); } }
+@keyframes dm-cap1 { 0%, 19% { opacity: 0; transform: translateY(6px); } 21%, 39% { opacity: 1; transform: none; } 41%, 100% { opacity: 0; transform: translateY(-6px); } }
+@keyframes dm-cap2 { 0%, 38% { opacity: 0; transform: translateY(6px); } 40%, 59% { opacity: 1; transform: none; } 61%, 100% { opacity: 0; transform: translateY(-6px); } }
+@keyframes dm-cap3 { 0%, 58% { opacity: 0; transform: translateY(6px); } 60%, 77% { opacity: 1; transform: none; } 79%, 100% { opacity: 0; transform: translateY(-6px); } }
+@keyframes dm-cap4 { 0%, 76% { opacity: 0; transform: translateY(6px); } 78%, 100% { opacity: 1; transform: none; } }
+
+.dm-progress { height: 100%; border-radius: 999px; background: var(--gold-grad); box-shadow: 0 0 12px rgba(230, 181, 71, .6); }
+.dm-progress.loop { animation: dm-prog var(--dm-loop) cubic-bezier(.4, 0, .2, 1) var(--dm-runs) both; }
+.dm-progress.wait { animation: dm-prog-wait 9s cubic-bezier(.1, .6, .3, 1) forwards; }
+.dm-progress.done { width: 100% !important; animation: none; transition: width .3s ease-out; }
+@keyframes dm-prog { 0% { width: 3%; } 92%, 100% { width: 100%; } }
+@keyframes dm-prog-wait { 0% { width: 4%; } 100% { width: 90%; } }
+
+@keyframes dm-twinkle { 0%, 100% { opacity: .2; transform: scale(.6); } 50% { opacity: 1; transform: scale(1.1); } }
+.dm-star { position: absolute; border-radius: 99px; background: var(--text); animation: dm-twinkle 2.4s ease-in-out infinite; }
+
+@keyframes dm-fade-out { to { opacity: 0; visibility: hidden; } }
+
+/* Reduce Motion: the mascot stands still; only text and progress change. */
+@media (prefers-reduced-motion: reduce) {
+  .dm *, .dm-dance, .dm-floor, .dm-flash-glow, .dm-star { animation: none !important; }
+  .dm-celebrate .happy { opacity: 1; }
+}

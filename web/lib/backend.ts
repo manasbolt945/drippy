@@ -79,7 +79,7 @@ export async function listScans(): Promise<ScanWithPhoto[]> {
 // --- Thumbnails of your own fits, kept in this browser only ------------------------
 
 const THUMBS_KEY = "drippy.thumbs";
-const MAX_THUMBS = 30;
+const MAX_THUMBS = 24;
 
 function readThumbnails(): Record<string, string> {
   try {

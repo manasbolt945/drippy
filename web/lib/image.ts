@@ -40,8 +40,8 @@ export function blobToBase64(blob: Blob): Promise<string> {
   });
 }
 
-/** Small JPEG data URL, used to keep demo-mode history in localStorage. */
+/** Small JPEG data URL kept in localStorage for History (big enough to fill a phone screen). */
 export async function thumbnailDataUrl(blob: Blob): Promise<string> {
-  const small = await normalizePhoto(blob, 360, 0.7);
+  const small = await normalizePhoto(blob, 600, 0.65);
   return `data:image/jpeg;base64,${await blobToBase64(small)}`;
 }

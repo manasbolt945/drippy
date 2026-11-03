@@ -191,3 +191,36 @@
   .welcome *, .dm-welcome * { animation: none !important; }
   .welcome .w-s1 { width: 100%; }
 }
+
+/* --- Moods: the mascot's energy follows the score (design canvas "Score + mascot") ---------------
+   meh <60 · okay 60–74 · love 75–89 · iconic 90+ */
+.dm-mood .fx-drip, .dm-mood .fx-spark, .dm-mood .fx-heart, .dm-mood .fx-conf { transform-box: fill-box; transform-origin: center; opacity: 0; }
+.dm-mood-meh .m-star { animation: dm-slump 2.8s ease-in-out infinite; }
+.dm-mood-meh .m-pupil { animation: dm-lookdown 2.8s ease-in-out infinite; }
+.dm-mood-meh .fx-drip { animation: dm-drip 2.8s ease-in infinite; }
+.dm-mood-okay .m-star { animation: dm-nod 2.2s ease-in-out infinite; }
+.dm-mood-okay .fx-spark { animation: dm-twinkle 2.2s ease-in-out infinite; }
+.dm-mood-love .m-star { animation: dm-hop 1.15s ease-in-out infinite; }
+.dm-mood-love .m-eye, .dm-mood-iconic .m-eye { animation: dm-wobble .8s ease-in-out infinite; }
+.dm-mood-love .m-eye.r, .dm-mood-iconic .m-eye.r { animation-delay: .15s; }
+.dm-mood-love .happy, .dm-mood-iconic .happy { opacity: 1; }
+.dm-mood-iconic .m-star { animation: dm-spinjump 1.6s cubic-bezier(.4, 0, .2, 1) infinite; }
+.dm-mood-iconic .fx-heart { animation: dm-float-up 1.6s ease-out infinite; }
+.dm-mood-iconic .fx-conf { animation: dm-confetti 1.6s ease-out infinite; }
+
+@keyframes dm-slump { 0%, 100% { transform: rotate(-6deg) translateY(2px) scale(1, .97); } 50% { transform: rotate(-11deg) translateY(4px) scale(1.02, .94); } }
+@keyframes dm-lookdown { 0%, 100% { transform: translate(-.6px, 1.4px); } 50% { transform: translate(.8px, 1.6px); } }
+@keyframes dm-drip { 0%, 30% { opacity: 0; transform: translateY(-3px); } 45% { opacity: 1; } 95%, 100% { opacity: 0; transform: translateY(9px); } }
+@keyframes dm-nod { 0%, 100% { transform: rotate(-7deg); } 50% { transform: rotate(7deg); } }
+@keyframes dm-hop { 0%, 100% { transform: translateY(0) scale(1); } 15% { transform: translateY(0) scale(1.1, .9); } 40% { transform: translateY(-9px) scale(.95, 1.06); } 65% { transform: translateY(0) scale(1.04, .97); } }
+@keyframes dm-spinjump {
+  0%, 100% { transform: translateY(0) rotate(0) scale(1); } 12% { transform: translateY(0) scale(1.14, .86); }
+  40% { transform: translateY(-18px) rotate(180deg) scale(.95, 1.08); } 60% { transform: translateY(-14px) rotate(360deg); }
+  78% { transform: translateY(0) rotate(360deg) scale(1.08, .92); }
+}
+@keyframes dm-float-up { 0% { opacity: 0; transform: translateY(0) scale(.4); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateY(-34px) scale(1.05); } }
+@keyframes dm-confetti { 0% { opacity: 0; transform: translate(0, 0) rotate(0); } 15% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) rotate(260deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .dm-mood * { animation: none !important; }
+}

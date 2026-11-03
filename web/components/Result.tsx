@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { occasionLabel } from "@/lib/occasions";
-import { type Scan, scoreColor } from "@/lib/types";
-import { Close, Report, Share } from "./icons";
-import ReportSheet from "./ReportSheet";
-import ScoreRing from "./ScoreRing";
+import { type Scan, scoreHex } from "@/lib/types";
+import { Close, Share } from "./icons";
+import Mascot from "./Mascot";
+import ReportContent from "./ReportContent";
 
 interface Props {
   scan: Scan;
@@ -14,76 +14,104 @@ interface Props {
   onShare: () => void;
 }
 
-/** Just the essentials: photo, score, verdict, best occasions. The details live in the report sheet. */
+const RC = 2 * Math.PI * 40;
+const MASCOT = 60;
+
+/** See-through score ring for the glass sheet. */
+function GlassRing({ value, label }: { value: number; label: string }) {
+  return (
+    <svg width="88" height="88" viewBox="0 0 100 100" aria-hidden="true">
+      <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,.22)" strokeWidth="9" />
+      <circle
+        className="ring-arc"
+        cx="50" cy="50" r="40" fill="none" stroke={scoreHex(value)} strokeWidth="9" strokeLinecap="round"
+        strokeDasharray={RC} strokeDashoffset={RC * (1 - value / 100)} transform="rotate(-90 50 50)"
+      />
+      <text x="50" y="57" textAnchor="middle" fill="var(--text)" fontFamily="var(--font-display)" fontWeight="800" fontSize="30">{value}</text>
+      <text x="50" y="71" textAnchor="middle" fill="rgba(244,239,227,.75)" fontFamily="var(--font-body)" fontWeight="700" fontSize={label.length > 9 ? 7 : 8.5} letterSpacing="1">{label}</text>
+    </svg>
+  );
+}
+
+/**
+ * Full-photo result with a liquid-glass peek sheet (design canvas "Peek sheet D1"):
+ * the score ring sits on the sheet's edge with the mascot perched on it, reacting to the score,
+ * and the verdict floats above as the mascot's thought. The arrow slides the sheet up into the full report.
+ */
 export default function Result({ scan, photoUrl, onClose, onShare }: Props) {
   const [focus, setFocus] = useState<string | null>(null);
-  const [reportOpen, setReportOpen] = useState(false);
+  const [thought, setThought] = useState(true);
+  const [open, setOpen] = useState(false);
 
   const occasions = [...(scan.occasions ?? [])].sort((a, b) => b.score - a.score);
   const focused = occasions.find((o) => o.occasion === focus);
-  const heroValue = focused ? focused.score : scan.overall ?? 0;
-  const heroLabel = focused ? `FOR ${occasionLabel(focused.occasion).toUpperCase()}` : "OVERALL";
-  const heroText = focused ? focused.reason : scan.headline;
+  const value = focused ? focused.score : scan.overall ?? 0;
+  const label = focused ? occasionLabel(focused.occasion).toUpperCase() : "OVERALL";
+  const text = focused ? focused.reason : scan.headline;
+
+  const pick = (occasion: string) => {
+    setFocus(focus === occasion ? null : occasion);
+    setThought(true);
+  };
 
   return (
-    <div className="screen sky">
-      <div className="scroll" style={{ position: "absolute", inset: 0 }}>
-        <div style={{ position: "relative", height: 320, background: "#0B1026" }}>
-          {photoUrl && (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={photoUrl} alt="Your outfit" style={{ width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 30%" }} />
-          )}
-          <div style={{ position: "absolute", left: 0, right: 0, top: 0, padding: "calc(12px + var(--safe-top)) 16px 0", display: "flex", justifyContent: "space-between" }}>
-            <button type="button" className="icon-btn" aria-label="Close" onClick={onClose}><Close /></button>
-            <button type="button" className="icon-btn" aria-label="Share" onClick={onShare}><Share /></button>
-          </div>
-        </div>
+    <div className="screen" style={{ background: "#0B1026" }}>
+      {photoUrl && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={photoUrl} alt="Your outfit" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", objectPosition: "center 25%" }} />
+      )}
+      <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, height: "46%", background: "linear-gradient(to bottom, rgba(7,11,26,0), rgba(7,11,26,.55))", pointerEvents: "none" }} />
 
-        <div style={{ position: "relative", marginTop: -36, borderRadius: "28px 28px 0 0", background: "var(--bg)", padding: "0 20px 150px", display: "flex", flexDirection: "column", gap: 36 }}>
-          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 14, marginTop: -84 }}>
-            <ScoreRing value={heroValue} label={heroLabel} />
-            <p className="display" style={{ margin: 0, textAlign: "center", fontWeight: 700, fontSize: 21, lineHeight: 1.25, letterSpacing: "-0.01em", maxWidth: 320 }} aria-live="polite">
-              {heroText}
-            </p>
-          </div>
-
-          <section style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-              <span className="label">Best for</span>
-              <button type="button" className="report-btn" aria-label="See full breakdown" onClick={() => setReportOpen(true)}>
-                <Report size={18} />
-              </button>
-            </div>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 10 }} role="radiogroup" aria-label="Show the score for an occasion">
-              {occasions.slice(0, 3).map((o) => {
-                const on = focus === o.occasion;
-                return (
-                  <button
-                    key={o.occasion}
-                    type="button"
-                    role="radio"
-                    aria-checked={on}
-                    onClick={() => setFocus(on ? null : o.occasion)}
-                    className={`best-tile${on ? " on" : ""}`}
-                  >
-                    <span className="display" style={{ fontSize: 30, color: scoreColor(o.score) }}>{o.score}</span>
-                    <span style={{ fontSize: 13, fontWeight: 600 }}>{occasionLabel(o.occasion)}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-        </div>
+      <div style={{ position: "absolute", left: 0, right: 0, top: 0, padding: "calc(12px + var(--safe-top)) 16px 0", display: "flex", justifyContent: "space-between", zIndex: 2 }}>
+        <button type="button" className="icon-btn glass" aria-label="Close" onClick={onClose}><Close /></button>
+        <button type="button" className="icon-btn glass" aria-label="Share" onClick={onShare}><Share /></button>
       </div>
 
-      <div style={{ position: "absolute", left: 0, right: 0, bottom: 0, padding: "28px 16px calc(20px + var(--safe-bottom))", display: "flex", gap: 10, background: "linear-gradient(to bottom, rgba(7,11,26,0), var(--bg) 35%)" }}>
-        <button type="button" className="btn btn-gold" style={{ flexGrow: 1, fontSize: 16 }} onClick={onShare}>
-          <Share size={18} /> Share to story
+      <div className={`r-sheet glass-dark${open ? " open" : ""}`}>
+        {/* The mascot's thought: the verdict, or the reason for the occasion you picked */}
+        {thought && !open && text && (
+          <div className="r-thought" key={`${focus}-${value}`} aria-live="polite">
+            <span className="r-dot big" /><span className="r-dot small" />
+            <div className="glass-dark r-cloud"><p className="display">{text}</p></div>
+          </div>
+        )}
+        <button type="button" className="r-perch" aria-label={thought ? "Hide the verdict" : "Show the verdict"} onClick={() => setThought(!thought)}>
+          <span className="r-mascot"><Mascot size={MASCOT} mode="mood" score={value} /></span>
+          <span className="r-badge glass"><GlassRing value={value} label={label} /></span>
         </button>
-        <button type="button" className="btn btn-outline" style={{ height: 56 }} onClick={onClose}>New fit</button>
-      </div>
+        <button type="button" className="r-chev glass" aria-label={open ? "Close the full report" : "See the full report"} aria-expanded={open} onClick={() => setOpen(!open)}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform .3s" }}><path d="M6 15l6-6 6 6" /></svg>
+        </button>
 
-      {reportOpen && <ReportSheet scan={scan} onClose={() => setReportOpen(false)} />}
+        <div className="r-body scroll">
+          <div style={{ display: "flex", gap: 8 }} role="radiogroup" aria-label="Show the score for an occasion">
+            {occasions.slice(0, 3).map((o) => (
+              <button
+                key={o.occasion}
+                type="button"
+                role="radio"
+                aria-checked={focus === o.occasion}
+                className={`glass r-tile${focus === o.occasion ? " on" : ""}`}
+                onClick={() => pick(o.occasion)}
+              >
+                <span className="display" style={{ fontSize: 22, color: scoreHex(o.score) }}>{o.score}</span>
+                <span style={{ fontSize: 12, fontWeight: 600 }}>{occasionLabel(o.occasion)}</span>
+              </button>
+            ))}
+          </div>
+          {open && <ReportContent scan={scan} />}
+        </div>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button type="button" className="btn gold-glass" style={{ flex: 1, height: 54, fontSize: 16 }} onClick={onShare}>
+            <Share size={18} /> Share
+          </button>
+          <button type="button" className="btn glass" style={{ height: 54, padding: "0 20px", fontSize: 15, fontWeight: 600 }} onClick={onClose}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
+            New fit
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

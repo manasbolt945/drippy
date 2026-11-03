@@ -83,7 +83,7 @@ Deno.serve(async (req) => {
       model: MODEL,
       max_tokens: 16000,
       output_config: {
-        effort: "medium",
+        effort: "low",
         format: { type: "json_schema", schema: FIT_RATING_JSON_SCHEMA },
       },
       system: SYSTEM_PROMPT,

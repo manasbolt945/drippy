@@ -56,6 +56,8 @@ export async function scoreFit(photo: Blob, occasionHint: OccasionId | null): Pr
     }
     throw new ScoreError("network", "We couldn't connect. Check your internet and try again.");
   }
+  // The server never keeps the photo, so History's thumbnail lives on this phone only.
+  if (data?.status === "scored") await saveThumbnail(data.id, photo);
   return data!;
 }
 
@@ -70,15 +72,31 @@ export async function listScans(): Promise<ScanWithPhoto[]> {
     .order("created_at", { ascending: false })
     .limit(50);
   if (error) throw new ScoreError("network", "We couldn't load your fits.");
-  const scans = (data ?? []) as Scan[];
+  const thumbs = readThumbnails();
+  return ((data ?? []) as Scan[]).map((scan) => ({ scan, photoUrl: thumbs[scan.id] ?? null }));
+}
 
-  const paths = scans.map((s) => s.image_path).filter((p): p is string => !!p);
-  const urls = new Map<string, string>();
-  if (paths.length) {
-    const { data: signed } = await supabase().storage.from("scans").createSignedUrls(paths, 60 * 60);
-    for (const s of signed ?? []) if (s.path && s.signedUrl) urls.set(s.path, s.signedUrl);
+// --- Thumbnails of your own fits, kept in this browser only ------------------------
+
+const THUMBS_KEY = "drippy.thumbs";
+const MAX_THUMBS = 30;
+
+function readThumbnails(): Record<string, string> {
+  try {
+    return JSON.parse(localStorage.getItem(THUMBS_KEY) ?? "{}") as Record<string, string>;
+  } catch {
+    return {};
   }
-  return scans.map((scan) => ({ scan, photoUrl: scan.image_path ? urls.get(scan.image_path) ?? null : null }));
+}
+
+async function saveThumbnail(scanId: string, photo: Blob): Promise<void> {
+  try {
+    const entries = Object.entries(readThumbnails()).slice(-(MAX_THUMBS - 1));
+    entries.push([scanId, await thumbnailDataUrl(photo)]);
+    localStorage.setItem(THUMBS_KEY, JSON.stringify(Object.fromEntries(entries)));
+  } catch {
+    // Storage full or blocked: this fit just shows without a thumbnail.
+  }
 }
 
 // --- Demo-mode history, kept in this browser only --------------------------------

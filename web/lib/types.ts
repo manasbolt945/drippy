@@ -22,6 +22,10 @@ export interface Scan {
   occasions: OccasionScore[] | null;
   tips: string[] | null;
   model: string | null;
+  duration_ms?: number | null;
+  input_tokens?: number | null;
+  output_tokens?: number | null;
+  image_bytes?: number | null;
   created_at: string;
 }
 

@@ -1,4 +1,6 @@
 // score-fit: rate an outfit photo with Claude and save the result.
+// The photo is only sent to Claude for the rating; it is never stored.
+// Every step logs one JSON line (see log()), visible under Edge Functions → score-fit → Logs.
 //
 // POST { image_base64: string (JPEG), occasion_hint?: OccasionId }
 // Authorization: Bearer <user JWT>   (anonymous users are fine)
@@ -47,35 +49,45 @@ Deno.serve(async (req) => {
 });
 
 async function handle(req: Request): Promise<Response> {
-  if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
+  const scanId = crypto.randomUUID();
+  const started = Date.now();
+  const done = (res: Response, fields: Record<string, unknown> = {}) => {
+    log(res.status >= 500 ? "error" : "info", "request.done", { scan_id: scanId, http: res.status, total_ms: Date.now() - started, ...fields });
+    return res;
+  };
+  if (req.method !== "POST") return done(json({ error: "method_not_allowed" }, 405));
 
   // --- Who is calling? -------------------------------------------------------
   const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
-  if (!token) return json({ error: "unauthorized" }, 401);
-  const { data: { user } } = await admin.auth.getUser(token);
-  if (!user) return json({ error: "unauthorized" }, 401);
+  const { data: { user } } = token ? await admin.auth.getUser(token) : { data: { user: null } };
+  if (!user) return done(json({ error: "unauthorized" }, 401), { reason: "no_user" });
 
   // --- Validate input --------------------------------------------------------
   let body: { image_base64?: unknown; occasion_hint?: unknown };
   try {
     body = await req.json();
   } catch {
-    return json({ error: "invalid_json" }, 400);
+    return done(json({ error: "invalid_json" }, 400), { user_id: user.id, reason: "invalid_json" });
   }
-  if (typeof body.image_base64 !== "string") return json({ error: "image_required" }, 400);
+  if (typeof body.image_base64 !== "string") {
+    return done(json({ error: "image_required" }, 400), { user_id: user.id, reason: "image_required" });
+  }
   const imageBase64 = body.image_base64;
   let imageBytes: Uint8Array;
   try {
     imageBytes = Uint8Array.from(atob(imageBase64), (c) => c.charCodeAt(0));
   } catch {
-    return json({ error: "invalid_image" }, 400);
+    return done(json({ error: "invalid_image" }, 400), { user_id: user.id, reason: "not_base64" });
   }
   const isJpeg = imageBytes[0] === 0xff && imageBytes[1] === 0xd8 && imageBytes[2] === 0xff;
-  if (!isJpeg || imageBytes.length > MAX_IMAGE_BYTES) return json({ error: "invalid_image" }, 400);
+  if (!isJpeg || imageBytes.length > MAX_IMAGE_BYTES) {
+    return done(json({ error: "invalid_image" }, 400), { user_id: user.id, reason: isJpeg ? "too_large" : "not_jpeg", image_bytes: imageBytes.length });
+  }
 
   const occasionHint = OCCASION_IDS.includes(body.occasion_hint as OccasionId)
     ? (body.occasion_hint as OccasionId)
     : null;
+  log("info", "request.received", { scan_id: scanId, user_id: user.id, image_bytes: imageBytes.length, occasion_hint: occasionHint });
 
   // --- Daily limit -----------------------------------------------------------
   const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
@@ -84,13 +96,18 @@ async function handle(req: Request): Promise<Response> {
     .select("status")
     .eq("user_id", user.id)
     .gte("created_at", since);
-  if (countError) return json({ error: "internal" }, 500);
+  if (countError) {
+    log("error", "limit.check_failed", { scan_id: scanId, error: countError.message });
+    return done(json({ error: "internal" }, 500));
+  }
   const scored = (recent ?? []).filter((r) => r.status === "scored").length;
-  if (scored >= FREE_DAILY_SCANS || (recent ?? []).length >= MAX_DAILY_ATTEMPTS) {
-    return json({ error: "daily_limit_reached", limit: FREE_DAILY_SCANS }, 429);
+  const attempts = (recent ?? []).length;
+  if (scored >= FREE_DAILY_SCANS || attempts >= MAX_DAILY_ATTEMPTS) {
+    return done(json({ error: "daily_limit_reached", limit: FREE_DAILY_SCANS }, 429), { user_id: user.id, reason: "daily_limit", scored_today: scored, attempts_today: attempts });
   }
 
   // --- Ask Claude ------------------------------------------------------------
+  const aiStarted = Date.now();
   let response;
   try {
     response = await anthropic.messages.create({
@@ -110,27 +127,32 @@ async function handle(req: Request): Promise<Response> {
       }],
     });
   } catch (error) {
+    const status = error instanceof Anthropic.APIError ? error.status : undefined;
+    log("error", "ai.error", { scan_id: scanId, ai_ms: Date.now() - aiStarted, status, message: error instanceof Error ? error.message : String(error) });
     if (error instanceof Anthropic.RateLimitError || error instanceof Anthropic.InternalServerError) {
-      console.error("anthropic unavailable", error.status, error.message);
-      return json({ error: "ai_busy" }, 503);
+      return done(json({ error: "ai_busy" }, 503));
     }
-    if (error instanceof Anthropic.APIError) {
-      console.error("anthropic error", error.status, error.message);
-      return json({ error: "ai_failed" }, 502);
-    }
+    if (error instanceof Anthropic.APIError) return done(json({ error: "ai_failed" }, 502));
     throw error;
   }
+  const usage = {
+    duration_ms: Date.now() - aiStarted,
+    input_tokens: response.usage.input_tokens,
+    output_tokens: response.usage.output_tokens,
+    image_bytes: imageBytes.length,
+  };
+  log("info", "ai.response", { scan_id: scanId, model: response.model, stop_reason: response.stop_reason, ...usage });
 
-  const scanId = crypto.randomUUID();
-  const baseRow = { id: scanId, user_id: user.id, occasion_hint: occasionHint, model: response.model };
+  // Photos are never stored: only the rating is saved. The app keeps its own thumbnail on the phone.
+  const baseRow = { id: scanId, user_id: user.id, occasion_hint: occasionHint, model: response.model, image_path: null, ...usage };
 
   if (response.stop_reason === "refusal") {
-    console.warn("refusal", response.stop_details?.category);
-    return await insertScan({
+    log("warn", "scan.refused", { scan_id: scanId, category: response.stop_details?.category });
+    return done(await insertScan({
       ...baseRow,
       status: "refused",
       message: "We couldn't rate this photo. Try a different one showing your outfit.",
-    });
+    }), { result: "refused" });
   }
 
   const text = response.content.find((b) => b.type === "text");
@@ -141,42 +163,41 @@ async function handle(req: Request): Promise<Response> {
     }
     rating = parseFitRating(text.text);
   } catch (error) {
-    console.error("bad rating output", error);
-    return json({ error: "ai_failed" }, 502);
+    log("error", "ai.bad_output", { scan_id: scanId, message: error instanceof Error ? error.message : String(error) });
+    return done(json({ error: "ai_failed" }, 502));
   }
 
   if (rating.status === "not_scorable") {
-    // Photo is not stored: it may be off-topic, explicit, or of a minor.
-    return await insertScan({ ...baseRow, status: "not_scorable", message: rating.message });
+    log("info", "scan.not_scorable", { scan_id: scanId, message: rating.message });
+    return done(await insertScan({ ...baseRow, status: "not_scorable", message: rating.message }), { result: "not_scorable" });
   }
 
-  // --- Store photo + result --------------------------------------------------
-  const imagePath = `${user.id}/${scanId}.jpg`;
-  const { error: uploadError } = await admin.storage
-    .from("scans")
-    .upload(imagePath, imageBytes, { contentType: "image/jpeg" });
-  if (uploadError) {
-    console.error("upload failed", uploadError);
-    return json({ error: "internal" }, 500);
-  }
-
-  return await insertScan({
+  const best = rating.occasions[0];
+  log("info", "scan.scored", { scan_id: scanId, overall: rating.overall, best_occasion: best?.occasion, best_score: best?.score, headline: rating.headline });
+  return done(await insertScan({
     ...baseRow,
     status: "scored",
-    image_path: imagePath,
     overall: rating.overall,
     headline: rating.headline,
     breakdown: rating.breakdown,
     occasions: rating.occasions,
     tips: rating.tips.slice(0, 3),
-  });
+  }), { result: "scored", overall: rating.overall });
 }
 
 async function insertScan(row: Record<string, unknown>): Promise<Response> {
   const { data, error } = await admin.from("scans").insert(row).select().single();
   if (error) {
-    console.error("insert failed", error);
+    log("error", "scan.insert_failed", { scan_id: row.id, error: error.message });
     return json({ error: "internal" }, 500);
   }
   return json(data);
+}
+
+/** One JSON line per event, so the Supabase log explorer can search by field. Never includes the image. */
+function log(level: "info" | "warn" | "error", event: string, fields: Record<string, unknown> = {}) {
+  const line = JSON.stringify({ event, ...fields });
+  if (level === "error") console.error(line);
+  else if (level === "warn") console.warn(line);
+  else console.log(line);
 }

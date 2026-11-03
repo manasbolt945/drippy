@@ -22,17 +22,31 @@ const admin = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY
 const anthropic = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY"), maxRetries: 3 });
 
 // The web app calls this from the browser, so every response needs CORS headers.
-const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": Deno.env.get("ALLOWED_ORIGIN") ?? "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-};
+// ALLOWED_ORIGINS is a comma-separated list (e.g. the Vercel site and localhost); unset allows any origin.
+const ALLOWED_ORIGINS = (Deno.env.get("ALLOWED_ORIGINS") ?? "").split(",").map((o) => o.trim()).filter(Boolean);
+
+function corsHeaders(origin: string | null): Record<string, string> {
+  const allow = ALLOWED_ORIGINS.length === 0 ? "*" : origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0];
+  return {
+    "Access-Control-Allow-Origin": allow,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Vary": "Origin",
+  };
+}
 
 const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), { status, headers: { ...CORS_HEADERS, "Content-Type": "application/json" } });
+  new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS_HEADERS });
+  const cors = corsHeaders(req.headers.get("Origin"));
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+  const res = await handle(req);
+  for (const [k, v] of Object.entries(cors)) res.headers.set(k, v);
+  return res;
+});
+
+async function handle(req: Request): Promise<Response> {
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
   // --- Who is calling? -------------------------------------------------------
@@ -156,7 +170,7 @@ Deno.serve(async (req) => {
     occasions: rating.occasions,
     tips: rating.tips.slice(0, 3),
   });
-});
+}
 
 async function insertScan(row: Record<string, unknown>): Promise<Response> {
   const { data, error } = await admin.from("scans").insert(row).select().single();

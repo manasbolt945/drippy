@@ -68,7 +68,7 @@ With no Supabase settings the app runs in **demo mode**: every screen works and 
 
 The camera needs HTTPS, except on `localhost`. On your phone over Wi-Fi (`http://<your-mac-ip>:3000`) uploading a photo works but the camera doesn't, so test the camera on the Vercel deployment.
 
-Deploy: import the repo in Vercel, set **Root Directory** to `web`, add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Optionally set the function secret `ALLOWED_ORIGIN=https://your-app.vercel.app` so only your site can call `score-fit`.
+Deploy: import the repo in Vercel, set **Root Directory** to `web`, add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`. Optionally set the function secret `ALLOWED_ORIGINS=https://your-app.vercel.app,http://localhost:3000` so only those sites can call `score-fit`.
 
 ### 4. iOS app
 

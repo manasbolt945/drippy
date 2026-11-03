@@ -52,7 +52,7 @@ npx supabase@3.0.0 secrets set FREE_DAILY_SCANS=10 MAX_DAILY_ATTEMPTS=30
 ## 5. Lock it down and test
 
 ```bash
-npx supabase@3.0.0 secrets set ALLOWED_ORIGIN=https://<your-app>.vercel.app
+npx supabase@3.0.0 secrets set ALLOWED_ORIGINS=https://<your-app>.vercel.app,http://localhost:3000
 ```
 
 Then open the Vercel URL on your phone (the camera works there because it's HTTPS) and check:

@@ -1,4 +1,5 @@
 import { logoDataUrl } from "./logo";
+import { moodFor, moodSvgDataUrl } from "./mood";
 import { occasionLabel } from "./occasions";
 import { type Scan, scoreHex } from "./types";
 
@@ -78,20 +79,57 @@ function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number
   return lines;
 }
 
-function pill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
-  const r = h / 2;
-  // Drawn with arcs rather than roundRect(), which older WebViews don't have.
+/** Rounded-rectangle path drawn with arcs (older WebViews have no roundRect()). */
+function roundedPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number, bottom = true) {
+  const rb = bottom ? r : 0;
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.lineTo(x + w - r, y);
-  ctx.arc(x + w - r, y + r, r, -Math.PI / 2, Math.PI / 2);
-  ctx.lineTo(x + r, y + h);
-  ctx.arc(x + r, y + r, r, Math.PI / 2, Math.PI * 1.5);
+  ctx.arc(x + w - r, y + r, r, -Math.PI / 2, 0);
+  ctx.lineTo(x + w, y + h - rb);
+  if (rb) ctx.arc(x + w - rb, y + h - rb, rb, 0, Math.PI / 2);
+  ctx.lineTo(x + rb, y + h);
+  if (rb) ctx.arc(x + rb, y + h - rb, rb, Math.PI / 2, Math.PI);
+  ctx.lineTo(x, y + r);
+  ctx.arc(x + r, y + r, r, Math.PI, Math.PI * 1.5);
   ctx.closePath();
-  ctx.fill();
 }
 
-/** Draws the 9:16 story image: photo, Drippy logo, score ring, verdict, best occasions. */
+/**
+ * Liquid glass on a canvas: the photo behind the shape, blurred, then a tint, a soft sheen and a light rim.
+ * Where canvas blur isn't supported (older Safari), the tint is simply a bit stronger.
+ */
+function glass(ctx: CanvasRenderingContext2D, bg: HTMLCanvasElement, shape: () => void, dark: boolean) {
+  const canBlur = "filter" in ctx;
+  ctx.save();
+  shape();
+  ctx.clip();
+  if (canBlur) {
+    ctx.filter = "blur(36px) saturate(160%)";
+    ctx.drawImage(bg, 0, 0);
+    ctx.filter = "none";
+  }
+  ctx.fillStyle = dark ? (canBlur ? "rgba(10,15,36,0.46)" : "rgba(10,15,36,0.78)") : canBlur ? "rgba(255,255,255,0.08)" : "rgba(30,38,72,0.7)";
+  ctx.fillRect(0, 0, W, H);
+  const sheen = ctx.createLinearGradient(0, 0, W, H);
+  sheen.addColorStop(0, "rgba(255,255,255,0.16)");
+  sheen.addColorStop(0.5, "rgba(255,255,255,0.03)");
+  sheen.addColorStop(1, "rgba(255,255,255,0.08)");
+  ctx.fillStyle = sheen;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
+  ctx.save();
+  shape();
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = dark ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.26)";
+  ctx.stroke();
+  ctx.restore();
+}
+
+/**
+ * The 9:16 story image, matching the result screen: full photo, a glass sheet with the score ring on its edge,
+ * the mascot perched on top (in its mood for this score), the verdict as its thought, and the best occasions.
+ */
 export async function renderShareCard(scan: Scan, photoUrl: string | null, siteHost: string): Promise<Blob> {
   const display = cssFont("--font-display", "sans-serif");
   const body = cssFont("--font-body", "sans-serif");
@@ -101,56 +139,80 @@ export async function renderShareCard(scan: Scan, photoUrl: string | null, siteH
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext("2d")!;
+  const value = scan.overall ?? 0;
 
+  // Photo, full bleed, with a soft darkening towards the bottom
   ctx.fillStyle = "#0B1026";
   ctx.fillRect(0, 0, W, H);
   if (photoUrl) {
     try {
       const img = await loadPhoto(photoUrl);
       const scale = Math.max(W / img.width, H / img.height);
-      const dw = img.width * scale;
-      const dh = img.height * scale;
-      ctx.drawImage(img, (W - dw) / 2, (H - dh) / 2.6, dw, dh);
+      ctx.drawImage(img, (W - img.width * scale) / 2, (H - img.height * scale) / 4, img.width * scale, img.height * scale);
     } catch {
       // No photo: the night background alone still makes a valid card.
     }
   }
+  const fade = ctx.createLinearGradient(0, H * 0.5, 0, H);
+  fade.addColorStop(0, "rgba(7,11,26,0)");
+  fade.addColorStop(1, "rgba(7,11,26,0.6)");
+  ctx.fillStyle = fade;
+  ctx.fillRect(0, H * 0.5, W, H * 0.5);
+  const bg = document.createElement("canvas");
+  bg.width = W;
+  bg.height = H;
+  bg.getContext("2d")!.drawImage(canvas, 0, 0);
 
-  // Top: logo
-  const top = ctx.createLinearGradient(0, 0, 0, 260);
-  top.addColorStop(0, "rgba(7,11,26,0.55)");
-  top.addColorStop(1, "rgba(7,11,26,0)");
-  ctx.fillStyle = top;
-  ctx.fillRect(0, 0, W, 260);
+  // Top: logo in a glass pill
+  glass(ctx, bg, () => roundedPath(ctx, 44, 44, 330, 112, 56), false);
   try {
-    ctx.drawImage(await loadImage(logoDataUrl()), 54, 54, 80, 80);
+    ctx.drawImage(await loadImage(logoDataUrl()), 64, 60, 80, 80);
   } catch {
     // Card still works with just the name.
   }
   ctx.fillStyle = "#F4EFE3";
   ctx.font = `800 54px ${display}`;
   ctx.textBaseline = "middle";
-  ctx.fillText("Drippy", 154, 95);
+  ctx.textAlign = "left";
+  ctx.fillText("Drippy", 162, 102);
 
-  // Bottom: fade, ring, verdict
-  const fade = ctx.createLinearGradient(0, H * 0.42, 0, H);
-  fade.addColorStop(0, "rgba(7,11,26,0)");
-  fade.addColorStop(0.4, "rgba(7,11,26,0.9)");
-  fade.addColorStop(1, "rgba(7,11,26,0.97)");
-  ctx.fillStyle = fade;
-  ctx.fillRect(0, H * 0.42, W, H * 0.58);
+  // Bottom: the glass sheet
+  const sheetTop = 1390;
+  glass(ctx, bg, () => roundedPath(ctx, 0, sheetTop, W, H - sheetTop + 90, 90, false), true);
 
-  const value = scan.overall ?? 0;
+  // Best for: three glass tiles
+  const best = [...(scan.occasions ?? [])].sort((a, b) => b.score - a.score).slice(0, 3);
+  const gap = 24;
+  const tw = (W - 96 - gap * 2) / 3;
+  const ty = sheetTop + 172;
+  best.forEach((o, i) => {
+    const x = 48 + i * (tw + gap);
+    glass(ctx, bg, () => roundedPath(ctx, x, ty, tw, 172, 52), false);
+    ctx.textAlign = "center";
+    ctx.fillStyle = scoreHex(o.score);
+    ctx.font = `800 66px ${display}`;
+    ctx.fillText(String(o.score), x + tw / 2, ty + 68);
+    ctx.fillStyle = "#F4EFE3";
+    ctx.font = `600 34px ${body}`;
+    ctx.fillText(occasionLabel(o.occasion), x + tw / 2, ty + 128);
+  });
+
+  ctx.textAlign = "center";
+  ctx.fillStyle = "#F2CD6B";
+  ctx.font = `700 36px ${body}`;
+  ctx.fillText(`What's your score? Try Drippy · ${siteHost}`, W / 2, H - 92);
+
+  // Score ring in a glass circle, sitting on the sheet's edge
   const cx = W / 2;
-  const cy = 1180;
-  const r = 170;
-  ctx.fillStyle = "rgba(7,11,26,0.8)";
-  ctx.beginPath();
-  ctx.arc(cx, cy, r + 40, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.lineWidth = 32;
+  const cy = sheetTop;
+  glass(ctx, bg, () => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, 140, 0, Math.PI * 2);
+  }, false);
+  const r = 104;
   ctx.lineCap = "round";
-  ctx.strokeStyle = "#1F2A4A";
+  ctx.lineWidth = 24;
+  ctx.strokeStyle = "rgba(255,255,255,0.22)";
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.stroke();
@@ -158,42 +220,38 @@ export async function renderShareCard(scan: Scan, photoUrl: string | null, siteH
   ctx.beginPath();
   ctx.arc(cx, cy, r, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * value) / 100);
   ctx.stroke();
-  ctx.textAlign = "center";
   ctx.fillStyle = "#F4EFE3";
-  ctx.font = `800 150px ${display}`;
-  ctx.fillText(String(value), cx, cy - 4);
-  ctx.fillStyle = "#98A2C0";
-  ctx.font = `700 30px ${body}`;
-  ctx.fillText("O V E R A L L", cx, cy + 82);
+  ctx.font = `800 92px ${display}`;
+  ctx.fillText(String(value), cx, cy - 6);
+  ctx.fillStyle = "rgba(244,239,227,0.75)";
+  ctx.font = `700 24px ${body}`;
+  ctx.fillText("O V E R A L L", cx, cy + 56);
 
-  ctx.fillStyle = "#F4EFE3";
-  ctx.font = `700 58px ${display}`;
-  const lines = wrapLines(ctx, scan.headline ?? "", W - 160, 3);
-  let y = 1440;
-  for (const line of lines) {
-    ctx.fillText(line, cx, y);
-    y += 70;
+  // Mascot perched on top of the ring, in its mood for this score (drawn 130/100 larger to fit its effects)
+  const m = 176;
+  const mTop = cy - 140 - m + 48;
+  try {
+    const big = (m * 130) / 100;
+    ctx.drawImage(await loadImage(moodSvgDataUrl(moodFor(value))), cx - big / 2, mTop - (big - m) / 2, big, big);
+  } catch {
+    // Card still works without the mascot.
   }
 
-  // Best three occasions as chips
-  const best = [...(scan.occasions ?? [])].sort((a, b) => b.score - a.score).slice(0, 3);
-  ctx.font = `600 34px ${body}`;
-  const labels = best.map((o) => `${occasionLabel(o.occasion)} ${o.score}`);
-  const widths = labels.map((l) => ctx.measureText(l).width + 56);
-  const gap = 18;
-  let x = cx - (widths.reduce((a, b) => a + b, 0) + gap * (labels.length - 1)) / 2;
-  y += 40;
-  labels.forEach((label, i) => {
-    ctx.fillStyle = "rgba(244,239,227,0.16)";
-    pill(ctx, x, y - 34, widths[i], 68);
+  // The verdict as the mascot's thought: a glass cloud above it, with two little bubbles trailing down
+  if (scan.headline) {
+    ctx.font = `700 50px ${display}`;
+    const lines = wrapLines(ctx, scan.headline, 780, 3);
+    const lh = 62;
+    const cw = Math.min(900, Math.max(...lines.map((l) => ctx.measureText(l).width)) + 104);
+    const ch = lines.length * lh + 80;
+    const cBottom = mTop - 34;
+    const cTop = cBottom - ch;
+    glass(ctx, bg, () => roundedPath(ctx, cx - cw / 2, cTop, cw, ch, 68), true);
+    glass(ctx, bg, () => { ctx.beginPath(); ctx.arc(cx + 92, cBottom + 22, 19, 0, Math.PI * 2); }, true);
+    glass(ctx, bg, () => { ctx.beginPath(); ctx.arc(cx + 72, cBottom + 58, 11, 0, Math.PI * 2); }, true);
     ctx.fillStyle = "#F4EFE3";
-    ctx.fillText(label, x + widths[i] / 2, y + 1);
-    x += widths[i] + gap;
-  });
-
-  ctx.fillStyle = "#E6B547";
-  ctx.font = `700 36px ${body}`;
-  ctx.fillText(`What's your score? Try Drippy · ${siteHost}`, cx, H - 110);
+    lines.forEach((line, i) => ctx.fillText(line, cx, cTop + 40 + lh / 2 + i * lh));
+  }
 
   return exportJpeg(canvas);
 }

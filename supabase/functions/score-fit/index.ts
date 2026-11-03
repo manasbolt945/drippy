@@ -36,12 +36,9 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return json({ error: "method_not_allowed" }, 405);
 
   // --- Who is calling? -------------------------------------------------------
-  const authHeader = req.headers.get("Authorization");
-  if (!authHeader) return json({ error: "unauthorized" }, 401);
-  const userClient = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_ANON_KEY")!, {
-    global: { headers: { Authorization: authHeader } },
-  });
-  const { data: { user } } = await userClient.auth.getUser();
+  const token = req.headers.get("Authorization")?.replace(/^Bearer\s+/i, "");
+  if (!token) return json({ error: "unauthorized" }, 401);
+  const { data: { user } } = await admin.auth.getUser(token);
   if (!user) return json({ error: "unauthorized" }, 401);
 
   // --- Validate input --------------------------------------------------------

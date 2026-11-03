@@ -22,6 +22,8 @@ The AI judges clothes, colors, fit and styling only, never the person's body or 
 
 ## Setup
 
+**Deploying the pilot?** Follow [DEPLOY.md](DEPLOY.md): Supabase (backend) and Vercel (frontend), both on free plans.
+
 ### 1. Tools
 
 - **Xcode** from the App Store, then point the command-line tools at it:
@@ -40,7 +42,6 @@ Create a project at https://supabase.com, and get an API key from https://consol
 
 ```bash
 cd FitScore
-supabase init            # creates supabase/config.toml; keep the existing migrations and functions
 supabase login
 supabase link --project-ref YOUR-PROJECT-REF
 supabase db push

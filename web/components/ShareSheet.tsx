@@ -8,18 +8,20 @@ import { Close, Share } from "./icons";
 interface Props {
   scan: Scan;
   photoUrl: string | null;
+  /** Draw the verdict as the mascot's thought (off when the user dismissed it on the result screen). */
+  showVerdict: boolean;
   onClose: () => void;
 }
 
 /** The story card and one Share button: the phone's share sheet where the browser allows it, else a download. */
-export default function ShareSheet({ scan, photoUrl, onClose }: Props) {
+export default function ShareSheet({ scan, photoUrl, showVerdict, onClose }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let objectUrl: string | null = null;
-    renderShareCard(scan, photoUrl, window.location.host)
+    renderShareCard(scan, photoUrl, window.location.host, { showVerdict })
       .then((blob) => {
         objectUrl = URL.createObjectURL(blob);
         setFile(new File([blob], `drippy-${scan.overall ?? "fit"}.jpg`, { type: blob.type || "image/jpeg" }));
@@ -32,7 +34,7 @@ export default function ShareSheet({ scan, photoUrl, onClose }: Props) {
     return () => {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [scan, photoUrl]);
+  }, [scan, photoUrl, showVerdict]);
 
   async function share() {
     if (!file || !url) return;

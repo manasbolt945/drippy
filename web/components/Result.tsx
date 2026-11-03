@@ -11,7 +11,8 @@ interface Props {
   scan: Scan;
   photoUrl: string | null;
   onClose: () => void;
-  onShare: () => void;
+  /** Share the story card; `showVerdict` mirrors whether the thought bubble is showing. */
+  onShare: (opts: { showVerdict: boolean }) => void;
 }
 
 const RC = 2 * Math.PI * 40;
@@ -49,6 +50,9 @@ export default function Result({ scan, photoUrl, onClose, onShare }: Props) {
   const label = focused ? occasionLabel(focused.occasion).toUpperCase() : "OVERALL";
   const text = focused ? focused.reason : scan.headline;
 
+  // The story card shows the verdict only if it's showing here too.
+  const share = () => onShare({ showVerdict: thought });
+
   const pick = (occasion: string) => {
     setFocus(focus === occasion ? null : occasion);
     setThought(true);
@@ -64,7 +68,7 @@ export default function Result({ scan, photoUrl, onClose, onShare }: Props) {
 
       <div style={{ position: "absolute", left: 0, right: 0, top: 0, padding: "calc(12px + var(--safe-top)) 16px 0", display: "flex", justifyContent: "space-between", zIndex: 2 }}>
         <button type="button" className="icon-btn glass" aria-label="Close" onClick={onClose}><Close /></button>
-        <button type="button" className="icon-btn glass" aria-label="Share" onClick={onShare}><Share /></button>
+        <button type="button" className="icon-btn glass" aria-label="Share" onClick={share}><Share /></button>
       </div>
 
       <div className={`r-sheet glass-dark${open ? " open" : ""}`}>
@@ -111,7 +115,7 @@ export default function Result({ scan, photoUrl, onClose, onShare }: Props) {
         </div>
 
         <div style={{ display: "flex", gap: 10 }}>
-          <button type="button" className="btn gold-glass" style={{ flex: 1, height: 54, fontSize: 16 }} onClick={onShare}>
+          <button type="button" className="btn gold-glass" style={{ flex: 1, height: 54, fontSize: 16 }} onClick={share}>
             <Share size={18} /> Share
           </button>
           <button type="button" className="btn glass" style={{ height: 54, padding: "0 20px", fontSize: 15, fontWeight: 600 }} onClick={onClose}>

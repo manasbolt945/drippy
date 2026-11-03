@@ -37,7 +37,7 @@ export default function DrippyApp() {
   const [view, setView] = useState<View>({ name: "boot" });
   const [photo, setPhoto] = useState<Photo | null>(null);
   const [occasion, setOccasion] = useState<OccasionId | null>(null);
-  const [sharing, setSharing] = useState(false);
+  const [sharing, setSharing] = useState<{ showVerdict: boolean } | null>(null);
   const [splashDone, setSplashDone] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -99,7 +99,7 @@ export default function DrippyApp() {
   }, [occasion, photo]);
 
   const toCamera = useCallback(() => {
-    setSharing(false);
+    setSharing(null);
     setView({ name: "camera" });
   }, []);
 
@@ -127,13 +127,13 @@ export default function DrippyApp() {
     case "result":
       screen = (
         <>
-          <Result scan={view.scan} photoUrl={view.photoUrl} onClose={toCamera} onShare={() => setSharing(true)} />
+          <Result scan={view.scan} photoUrl={view.photoUrl} onClose={toCamera} onShare={setSharing} />
           {DEMO_MODE && view.scan.model === "demo" && (
             <div style={{ position: "absolute", top: "calc(68px + var(--safe-top))", left: "50%", transform: "translateX(-50%)", padding: "6px 12px", borderRadius: 999, background: "rgba(7,11,26,0.7)", border: "1px solid var(--gold)", color: "var(--gold-text)", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>
               Sample result · backend not connected
             </div>
           )}
-          {sharing && <ShareSheet scan={view.scan} photoUrl={view.photoUrl} onClose={() => setSharing(false)} />}
+          {sharing && <ShareSheet scan={view.scan} photoUrl={view.photoUrl} showVerdict={sharing.showVerdict} onClose={() => setSharing(null)} />}
         </>
       );
       break;

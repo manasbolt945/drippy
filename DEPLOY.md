@@ -64,3 +64,32 @@ Then open the Vercel URL on your phone (the camera works there because it's HTTP
 - [ ] Share opens the phone's share sheet
 
 **Add to Home Screen** from the browser menu to use it like an app.
+
+## 6. Watching usage, logs and tables
+
+| What | Where |
+|---|---|
+| Every scan (score, status, timing, tokens) | Supabase → **Table Editor → `scans`** |
+| One row per day: scans, people, average score, estimated Claude cost | Supabase → **SQL Editor**: `select * from daily_stats;` |
+| Users (anonymous accounts) | Supabase → **Authentication → Users** |
+| Function logs, one line per step | Supabase → **Edge Functions → score-fit → Logs** (search e.g. `scan.scored`, `ai.error`, `request.done`) |
+| Invocations, errors, response times | Supabase → **Edge Functions → score-fit → Overview** |
+| Database / storage size vs free limits | Supabase → **Project Settings → Usage** (or Organization → Usage) |
+| Real Claude spend | https://platform.claude.com → **Usage** and **Cost** |
+| Site traffic | Vercel → project → **Analytics** (turn on Web Analytics, free) and **Logs** |
+
+Log events from `score-fit` (JSON, never the photo): `request.received` (user, photo size, occasion), `ai.response` (model, stop reason, time, tokens), `scan.scored` (score, best occasion, headline), `scan.not_scorable`, `scan.refused`, `ai.error`, `ai.bad_output`, `scan.insert_failed`, and `request.done` (HTTP status, total time) for every request, including rejected ones with a `reason`.
+
+Photos are **not stored**: they're sent to Claude for the rating and then dropped. History thumbnails live only in each person's browser.
+
+Handy SQL:
+
+```sql
+-- latest scans
+select created_at, status, overall, headline, duration_ms, input_tokens, output_tokens
+from scans order by created_at desc limit 20;
+
+-- most active people today
+select user_id, count(*) as scans, round(avg(overall)) as avg_score
+from scans where created_at > now() - interval '1 day' group by 1 order by 2 desc;
+```

@@ -68,12 +68,20 @@ export default function Result({ scan, photoUrl, onClose, onShare }: Props) {
       </div>
 
       <div className={`r-sheet glass-dark${open ? " open" : ""}`}>
-        {/* The mascot's thought: the verdict, or the reason for the occasion you picked */}
+        {/* The mascot's thought: the verdict, or the reason for the occasion you picked. Tap it to dismiss. */}
         {thought && !open && text && (
           <div className="r-thought" key={`${focus}-${value}`} aria-live="polite">
             <span className="r-dot big" /><span className="r-dot small" />
-            <div className="glass-dark r-cloud"><p className="display">{text}</p></div>
+            <button type="button" className="glass-dark r-cloud" aria-label="Hide the verdict" onClick={() => setThought(false)}>
+              <p className="display">{text}</p>
+            </button>
           </div>
+        )}
+        {/* While it's hidden, a little "…" by the mascot's head hints that it has something to say */}
+        {!thought && !open && text && (
+          <button type="button" className="r-hint glass-dark" aria-label="Show the verdict" onClick={() => setThought(true)}>
+            <span /><span /><span />
+          </button>
         )}
         <button type="button" className="r-perch" aria-label={thought ? "Hide the verdict" : "Show the verdict"} onClick={() => setThought(!thought)}>
           <span className="r-mascot"><Mascot size={MASCOT} mode="mood" score={value} /></span>

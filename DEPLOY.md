@@ -1,6 +1,7 @@
 # Deploying Drippy (free tiers)
 
 Backend on **Supabase** (database, photo storage, `score-fit` function), frontend on **Vercel**.
+Live pilot: **https://drippy-kappa-eight.vercel.app** (Supabase project `lqoocllzxcbmkoxigzmm`).
 Both free plans are enough for the friends pilot. The only paid part is Claude API usage (a few dollars a month on Haiku).
 
 Never paste these into chat, code or GitHub: the **database password**, the Supabase **secret / service_role key**, and your **Anthropic API key**.

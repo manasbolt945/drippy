@@ -68,6 +68,28 @@ export const Download = ({ size = 20 }: P) => (
   </svg>
 );
 
+export const Report = ({ size = 20 }: P) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} strokeWidth="2.2" aria-hidden="true">
+    <path d="M5 20V11M12 20V5M19 20v-6" />
+  </svg>
+);
+export const Palette = ({ size = 18 }: P) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} strokeWidth="2" aria-hidden="true">
+    <path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.8 1.6-1.6 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.7-1.6 1.6-1.6H16a5 5 0 0 0 5-5c0-4-4-7.4-9-7.4z" />
+    <circle cx="7.5" cy="11" r="1" /><circle cx="10" cy="7" r="1" /><circle cx="14.5" cy="7" r="1" />
+  </svg>
+);
+export const Ruler = ({ size = 18 }: P) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} strokeWidth="2" aria-hidden="true">
+    <path d="M3 17L17 3l4 4L7 21z" /><path d="M7 13l2 2M10 10l2 2M13 7l2 2" />
+  </svg>
+);
+export const Layers = ({ size = 18 }: P) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} strokeWidth="2" aria-hidden="true">
+    <path d="M12 3l9 5-9 5-9-5z" /><path d="M3 13l9 5 9-5" />
+  </svg>
+);
+
 /** The Mirror Selfie Star tile next to the name. */
 export function Logo({ size = 40, wordSize = 22 }: { size?: number; wordSize?: number }) {
   return (

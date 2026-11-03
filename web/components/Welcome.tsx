@@ -1,75 +1,99 @@
 "use client";
 
-import { Logo, Plus, ShareGold, Star } from "./icons";
+import { useLayoutEffect, useRef, useState } from "react";
+import Mascot from "./Mascot";
 
+const MASCOT = 220;
+const SLOT = 34;
+const RING_C = 439.8;
+
+/**
+ * First-run screen with no headline: the mascot tells the story in three scenes (Snap → Get rated → Share)
+ * inside a mirror, flying up to become the logo before "Drippy". Loops until the user allows the camera.
+ */
 export default function Welcome({ onStart, onUpload }: { onStart: () => void; onUpload: () => void }) {
+  const slotRef = useRef<HTMLDivElement>(null);
+  const mascotRef = useRef<HTMLDivElement>(null);
+  const [fly, setFly] = useState({ x: 0, y: -300, k: SLOT / MASCOT });
+
+  // Measure where the logo slot is, so the mascot lands exactly there on any screen size.
+  useLayoutEffect(() => {
+    const measure = () => {
+      const s = slotRef.current?.getBoundingClientRect();
+      const m = mascotRef.current?.getBoundingClientRect();
+      if (!s || !m) return;
+      setFly({ x: s.left + s.width / 2 - (m.left + m.width / 2), y: s.top + s.height / 2 - (m.top + m.height / 2), k: SLOT / MASCOT });
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
   return (
-    <div className="screen sky" style={{ padding: "calc(40px + var(--safe-top)) 24px calc(28px + var(--safe-bottom))", gap: 26 }}>
-      <Logo size={52} wordSize={26} />
-
-      <div className="card" style={{ position: "relative", height: 250, borderRadius: 28, display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
-        <svg width="100%" height="100%" viewBox="0 0 358 250" preserveAspectRatio="xMidYMid slice" style={{ position: "absolute", inset: 0 }} aria-hidden="true">
-          <g fill="#F4EFE3">
-            <circle cx="34" cy="62" r="1.2" opacity=".7" /><circle cx="88" cy="28" r="1" opacity=".5" />
-            <circle cx="140" cy="52" r="1.4" opacity=".8" /><circle cx="214" cy="22" r="1" opacity=".6" />
-            <circle cx="262" cy="46" r="1.2" opacity=".5" /><circle cx="318" cy="120" r="1.4" opacity=".7" />
-            <circle cx="302" cy="204" r="1" opacity=".5" /><circle cx="58" cy="168" r="1" opacity=".6" />
-            <circle cx="24" cy="226" r="1.3" opacity=".7" /><circle cx="188" cy="236" r="1" opacity=".5" />
-          </g>
-          <path d="M318 26a16 16 0 1 0 14 24a13 13 0 1 1 -14 -24z" fill="#F2D27A" opacity=".9" />
-        </svg>
-        <svg width="170" height="170" viewBox="0 0 190 190" role="img" aria-label="Example score of 88" style={{ position: "relative" }}>
-          <circle cx="95" cy="95" r="78" fill="none" stroke="var(--track)" strokeWidth="14" />
-          <circle cx="95" cy="95" r="78" fill="none" stroke="var(--gold)" strokeWidth="14" strokeLinecap="round" strokeDasharray="490.1" strokeDashoffset="58.8" transform="rotate(-90 95 95)" />
-          <text x="95" y="104" textAnchor="middle" fill="var(--text)" fontFamily="var(--font-display)" fontWeight="800" fontSize="64">88</text>
-          <text x="95" y="130" textAnchor="middle" fill="var(--muted)" fontFamily="var(--font-body)" fontWeight="700" fontSize="11" letterSpacing="1.5">OVERALL</text>
-        </svg>
-        <Badge style={{ left: 16, top: 18 }}>Work 92</Badge>
-        <Badge style={{ right: 16, top: 64 }}>Date night 89</Badge>
-        <Badge style={{ left: 28, bottom: 22 }}>Wedding 74</Badge>
+    <div
+      // Browsers read the --fly-* values when an animation starts, so restart the story whenever they change.
+      key={`${fly.x},${fly.y}`}
+      className="screen sky welcome"
+      style={{ ["--fly-x" as string]: `${fly.x}px`, ["--fly-y" as string]: `${fly.y}px`, ["--fly-k" as string]: fly.k }}
+    >
+      <div style={{ paddingTop: "calc(24px + var(--safe-top))", display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
+        <div ref={slotRef} className="w-slot" style={{ width: SLOT, height: SLOT }} />
+        <span className="display" style={{ fontSize: 22 }}>Drippy</span>
+      </div>
+      <div style={{ display: "flex", gap: 6, padding: "16px 24px 0" }} aria-hidden="true">
+        {["w-s1", "w-s2", "w-s3"].map((c) => (
+          <div key={c} style={{ flex: 1, height: 4, borderRadius: 99, background: "rgba(244,239,227,.18)", overflow: "hidden" }}>
+            <div className={c} style={{ height: "100%", background: "var(--gold)" }} />
+          </div>
+        ))}
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        <h1 className="display" style={{ margin: 0, fontSize: 36, lineHeight: 1.05, letterSpacing: "-0.03em" }}>
-          Snap your fit.<br />Get your score.
-        </h1>
-        <p className="muted" style={{ margin: 0, fontSize: 16, lineHeight: 1.5 }}>
-          AI rates your outfit for work, weddings, dates and more, and tells you how to level it up.
-        </p>
+      <div style={{ position: "relative", flex: 1, minHeight: 0 }} aria-hidden="true">
+        <div className="w-mirror" />
+        <div className="w-mirror w-glow" />
+        <div className="w-card">
+          <svg width="160" height="160" viewBox="0 0 176 176">
+            <circle cx="88" cy="88" r="80" fill="var(--bg)" fillOpacity=".85" />
+            <circle cx="88" cy="88" r="70" fill="none" stroke="var(--surface-2)" strokeWidth="13" />
+            <circle className="w-ring" cx="88" cy="88" r="70" fill="none" stroke="var(--gold)" strokeWidth="13" strokeLinecap="round" strokeDasharray={RING_C} transform="rotate(-90 88 88)" />
+            <text x="88" y="102" textAnchor="middle" fill="var(--text)" fontFamily="var(--font-display)" fontWeight="800" fontSize="60">88</text>
+          </svg>
+          <div style={{ display: "flex", gap: 8 }}>
+            <span className="w-chip w-p1">Work 92</span>
+            <span className="w-chip w-p2">Date 89</span>
+          </div>
+          <span className="w-chip w-p3">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7M16 6l-4-4-4 4M12 2v13" /></svg>
+            Share
+          </span>
+        </div>
+        {/* The anchor never moves (it is what we measure); the inner layer does the flying. */}
+        <div ref={mascotRef} className="w-anchor" style={{ width: MASCOT, height: MASCOT, marginLeft: -MASCOT / 2, marginTop: -MASCOT / 2 }}>
+          <div className="w-fly dm-welcome"><Mascot size={MASCOT} /></div>
+        </div>
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, fontSize: 15 }}>
-        <Feature icon={<Star />}>Scores for 8 occasions</Feature>
-        <Feature icon={<Plus />}>Quick tips to fix what's off</Feature>
-        <Feature icon={<ShareGold />}>Share your score to your story</Feature>
+      <div style={{ position: "relative", height: 40, margin: "8px 0 4px" }} aria-hidden="true">
+        <span className="w-cap w-c1">Snap</span>
+        <span className="w-cap w-c2">Get rated</span>
+        <span className="w-cap w-c3">Share</span>
       </div>
+      <p className="visually-hidden">Drippy: snap a mirror selfie, get your fit rated for every occasion, and share it.</p>
 
-      <div style={{ flexGrow: 1 }} />
-
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-        <button type="button" className="btn btn-gold" onClick={onStart}>Allow camera &amp; start</button>
-        <button type="button" className="btn btn-outline" onClick={onUpload}>Upload a photo instead</button>
-        <p className="muted" style={{ margin: "4px 0 0", textAlign: "center", fontSize: 12 }}>
-          We rate the clothes, never your body or face.
-        </p>
+      <div style={{ padding: "12px 24px calc(24px + var(--safe-bottom))", display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
+        <button type="button" className="btn btn-gold" style={{ width: "100%", height: 58 }} onClick={onStart}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
+          Allow camera
+        </button>
+        <button type="button" onClick={onUpload} style={{ display: "flex", alignItems: "center", gap: 8, border: 0, background: "none", color: "var(--gold-text)", fontSize: 14, fontWeight: 600, cursor: "pointer", padding: 6 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="9" cy="9" r="2" /><path d="M21 15l-5-5L5 21" /></svg>
+          Upload a photo
+        </button>
+        <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#5A6688" }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.4-3.4 8.2-8 9-4.6-.8-8-4.6-8-9V6z" /></svg>
+          Clothes only, never faces
+        </span>
       </div>
-    </div>
-  );
-}
-
-function Badge({ children, style }: { children: React.ReactNode; style: React.CSSProperties }) {
-  return (
-    <div style={{ position: "absolute", padding: "6px 12px", borderRadius: 999, background: "var(--surface-2)", fontSize: 13, fontWeight: 600, ...style }}>
-      {children}
-    </div>
-  );
-}
-
-function Feature({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
-  return (
-    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-      {icon}
-      <span>{children}</span>
     </div>
   );
 }

@@ -123,3 +123,71 @@
   .dm *, .dm-dance, .dm-floor, .dm-flash-glow, .dm-star { animation: none !important; }
   .dm-celebrate .happy { opacity: 1; }
 }
+
+/* --- Welcome: Snap → Get rated → Share in the mirror (design canvas "Welcome B+C") ---------------
+   One story is 7.5s; the mascot flies to the logo slot by --fly-x / --fly-y / --fly-k (measured in Welcome.tsx). */
+.welcome { --w-loop: 7.5s; }
+.welcome .w-slot { border-radius: 10px; border: 1.5px dashed rgba(244, 239, 227, .35); animation: dm-w-slot var(--w-loop) linear infinite; }
+.welcome .w-mirror {
+  position: absolute; left: 50%; top: 6px; bottom: 0; width: min(290px, 76%); transform: translateX(-50%);
+  border: 2px solid rgba(244, 239, 227, .14); border-bottom: 0; border-radius: 145px 145px 0 0;
+  background: linear-gradient(180deg, rgba(27, 37, 82, .35), rgba(7, 11, 26, 0));
+}
+.welcome .w-glow { border-color: transparent; background: radial-gradient(circle at 50% 45%, #FFF4D6, rgba(255, 244, 214, 0) 70%); opacity: 0; animation: dm-w-glow var(--w-loop) linear infinite; }
+.welcome .w-card {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px;
+  opacity: 0; animation: dm-w-card var(--w-loop) ease-out infinite;
+}
+.welcome .w-ring { stroke-dashoffset: 52.8; animation: dm-w-ring var(--w-loop) cubic-bezier(.3, 0, .2, 1) infinite; }
+.welcome .w-chip {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 13px; border-radius: 999px; white-space: nowrap;
+  background: rgba(19, 27, 54, .92); box-shadow: 0 0 0 1px #1D2748, 0 10px 24px rgba(0, 0, 0, .35); font-size: 13px; font-weight: 700;
+  opacity: 0;
+}
+.welcome .w-p1 { animation: dm-w-p1 var(--w-loop) ease-out infinite; }
+.welcome .w-p2 { animation: dm-w-p2 var(--w-loop) ease-out infinite; }
+.welcome .w-p3 { animation: dm-w-p3 var(--w-loop) ease-out infinite; }
+.welcome .w-anchor { position: absolute; left: 50%; top: 50%; }
+.welcome .w-fly { animation: dm-w-fly var(--w-loop) cubic-bezier(.6, 0, .2, 1) infinite; }
+.dm-welcome .m-star { animation: dm-w-pose var(--w-loop) cubic-bezier(.45, .05, .3, 1.2) infinite; }
+.dm-welcome .m-flash { animation: dm-w-flash var(--w-loop) linear infinite; }
+.dm-welcome .m-eye { animation: dm-wobble .9s ease-in-out infinite; }
+.dm-welcome .m-eye.r { animation-delay: .15s; }
+.dm-welcome .happy { animation: dm-w-happy var(--w-loop) linear infinite; }
+.welcome .w-cap {
+  position: absolute; left: 0; right: 0; text-align: center; opacity: 0;
+  font-family: var(--font-display), system-ui, sans-serif; font-weight: 800; font-size: 30px; letter-spacing: -.02em;
+}
+.welcome .w-c1 { opacity: 1; animation: dm-w-c1 var(--w-loop) ease-out infinite; }
+.welcome .w-c2 { animation: dm-w-c2 var(--w-loop) ease-out infinite; }
+.welcome .w-c3 { animation: dm-w-c3 var(--w-loop) ease-out infinite; }
+.welcome .w-s1 { animation: dm-w-s1 var(--w-loop) linear infinite; }
+.welcome .w-s2 { animation: dm-w-s2 var(--w-loop) linear infinite; }
+.welcome .w-s3 { animation: dm-w-s3 var(--w-loop) linear infinite; }
+
+@keyframes dm-w-fly { 0%, 31% { transform: none; } 38%, 96% { transform: translate(var(--fly-x), var(--fly-y)) scale(var(--fly-k)); } 100% { transform: none; } }
+@keyframes dm-w-pose { 0%, 2% { transform: none; } 6%, 12% { transform: rotate(-12deg); } 16%, 22% { transform: rotate(11deg) translateY(-3px); } 26%, 31% { transform: scale(.9, 1) skewY(-5deg); } 35%, 100% { transform: none; } }
+@keyframes dm-w-flash {
+  0%, 7%, 10%, 14%, 17%, 21%, 24%, 28%, 33%, 100% { opacity: 0; transform: scale(.4); }
+  8%, 9%, 15%, 16%, 22%, 23%, 29%, 32% { opacity: 1; transform: scale(1.15); }
+}
+@keyframes dm-w-glow { 0%, 7%, 10%, 14%, 17%, 21%, 24%, 28% { opacity: 0; } 8%, 15%, 22% { opacity: .35; } 31% { opacity: .85; } 38%, 100% { opacity: 0; } }
+@keyframes dm-w-happy { 0%, 66% { opacity: 0; } 70%, 96% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes dm-w-card { 0%, 34% { opacity: 0; transform: scale(.85); } 40% { opacity: 1; transform: scale(1.04); } 44%, 96% { opacity: 1; transform: none; } 99%, 100% { opacity: 0; transform: scale(.95); } }
+@keyframes dm-w-ring { 0%, 38% { stroke-dashoffset: 439.8; } 54%, 100% { stroke-dashoffset: 52.8; } }
+@keyframes dm-w-slot { 0%, 34% { opacity: .5; } 38%, 96% { opacity: 0; } 100% { opacity: .5; } }
+@keyframes dm-w-p1 { 0%, 50% { opacity: 0; transform: scale(.4) translateY(8px); } 53% { opacity: 1; transform: scale(1.12); } 55%, 95% { opacity: 1; transform: none; } 98%, 100% { opacity: 0; } }
+@keyframes dm-w-p2 { 0%, 55% { opacity: 0; transform: scale(.4) translateY(8px); } 58% { opacity: 1; transform: scale(1.12); } 60%, 95% { opacity: 1; transform: none; } 98%, 100% { opacity: 0; } }
+@keyframes dm-w-p3 { 0%, 70% { opacity: 0; transform: scale(.4) translateY(8px); } 73% { opacity: 1; transform: scale(1.12); } 75%, 95% { opacity: 1; transform: none; } 98%, 100% { opacity: 0; } }
+@keyframes dm-w-c1 { 0%, 31% { opacity: 1; transform: none; } 34%, 98% { opacity: 0; transform: translateY(-8px); } 100% { opacity: 1; } }
+@keyframes dm-w-c2 { 0%, 34% { opacity: 0; transform: translateY(8px); } 38%, 64% { opacity: 1; transform: none; } 67%, 100% { opacity: 0; transform: translateY(-8px); } }
+@keyframes dm-w-c3 { 0%, 66% { opacity: 0; transform: translateY(8px); } 70%, 96% { opacity: 1; transform: none; } 99%, 100% { opacity: 0; } }
+@keyframes dm-w-s1 { 0% { width: 0; } 33.3%, 100% { width: 100%; } }
+@keyframes dm-w-s2 { 0%, 33.3% { width: 0; } 66.6%, 100% { width: 100%; } }
+@keyframes dm-w-s3 { 0%, 66.6% { width: 0; } 99% { width: 100%; } 100% { width: 0; } }
+
+/* Reduce Motion on the welcome screen: the mascot stays in the mirror with the first caption. */
+@media (prefers-reduced-motion: reduce) {
+  .welcome *, .dm-welcome * { animation: none !important; }
+  .welcome .w-s1 { width: 100%; }
+}

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { renderShareCard } from "@/lib/shareCard";
 import type { Scan } from "@/lib/types";
-import { Close, Download, Share } from "./icons";
+import { Close, Share } from "./icons";
 
 interface Props {
   scan: Scan;
@@ -11,7 +11,7 @@ interface Props {
   onClose: () => void;
 }
 
-/** Renders the story card, then hands it to the phone's share sheet (Instagram, WhatsApp…) or saves it. */
+/** The story card and one Share button: the phone's share sheet where the browser allows it, else a download. */
 export default function ShareSheet({ scan, photoUrl, onClose }: Props) {
   const [file, setFile] = useState<File | null>(null);
   const [url, setUrl] = useState<string | null>(null);
@@ -22,27 +22,36 @@ export default function ShareSheet({ scan, photoUrl, onClose }: Props) {
     renderShareCard(scan, photoUrl, window.location.host)
       .then((blob) => {
         objectUrl = URL.createObjectURL(blob);
-        setFile(new File([blob], `drippy-${scan.overall ?? "fit"}.png`, { type: "image/png" }));
+        setFile(new File([blob], `drippy-${scan.overall ?? "fit"}.jpg`, { type: blob.type || "image/jpeg" }));
         setUrl(objectUrl);
       })
-      .catch(() => setFailed(true));
+      .catch((err) => {
+        console.error("share card failed", err);
+        setFailed(true);
+      });
     return () => {
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
   }, [scan, photoUrl]);
 
-  const canShareFile = !!file && typeof navigator.canShare === "function" && navigator.canShare({ files: [file] });
-
   async function share() {
-    if (!file) return;
-    try {
-      await navigator.share({
-        files: [file],
-        text: `My fit scored ${scan.overall} on Drippy. What's yours? ${window.location.origin}`,
-      });
-    } catch {
-      // User closed the share sheet.
+    if (!file || !url) return;
+    const canShareFile = typeof navigator.canShare === "function" && navigator.canShare({ files: [file] });
+    if (canShareFile) {
+      try {
+        await navigator.share({ files: [file], text: `My fit scored ${scan.overall} on Drippy. What's yours? ${window.location.origin}` });
+        return;
+      } catch (err) {
+        if ((err as DOMException)?.name === "AbortError") return; // closed the share sheet
+      }
     }
+    // No file sharing here (e.g. Instagram's in-app browser on Android): save the image instead.
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
   }
 
   return (
@@ -51,30 +60,20 @@ export default function ShareSheet({ scan, photoUrl, onClose }: Props) {
         <Close />
       </button>
 
-      <div style={{ height: "min(62vh, 560px)", aspectRatio: "9 / 16", borderRadius: 20, overflow: "hidden", background: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }}>
+      <div style={{ height: "min(64vh, 580px)", aspectRatio: "9 / 16", borderRadius: 20, overflow: "hidden", background: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }}>
         {url ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={url} alt="Your Drippy story card" style={{ width: "100%", height: "100%" }} />
+        ) : failed ? (
+          <span className="muted" style={{ fontSize: 14 }}>Couldn&apos;t make your card.</span>
         ) : (
-          <span className="muted" style={{ fontSize: 14 }}>{failed ? "Couldn't make your card." : "Making your card…"}</span>
+          <span className="spinner" aria-label="Making your card" style={{ borderColor: "rgba(244,239,227,.2)", borderTopColor: "var(--gold)" }} />
         )}
       </div>
 
-      <div style={{ width: "100%", maxWidth: 340, display: "flex", flexDirection: "column", gap: 10 }}>
-        {canShareFile && (
-          <button type="button" className="btn btn-gold" onClick={share}>
-            <Share size={18} /> Share to story
-          </button>
-        )}
-        {url && (
-          <a className={`btn ${canShareFile ? "btn-outline" : "btn-gold"}`} href={url} download={file?.name}>
-            <Download size={18} /> Save image
-          </a>
-        )}
-        <p className="muted" style={{ margin: 0, textAlign: "center", fontSize: 12 }}>
-          {canShareFile ? "Pick Instagram, then Story." : "Save it, then post it to your story."}
-        </p>
-      </div>
+      <button type="button" className="btn btn-gold" style={{ width: "100%", maxWidth: 340 }} onClick={share} disabled={!url}>
+        <Share size={18} /> Share
+      </button>
     </div>
   );
 }

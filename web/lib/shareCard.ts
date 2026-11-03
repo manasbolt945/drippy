@@ -1,4 +1,3 @@
-import { canvasToBlob } from "./image";
 import { logoDataUrl } from "./logo";
 import { occasionLabel } from "./occasions";
 import { type Scan, scoreHex } from "./types";
@@ -6,24 +5,55 @@ import { type Scan, scoreHex } from "./types";
 const W = 1080;
 const H = 1920;
 
-function loadLogo(): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const img = new Image();
-    img.onload = () => resolve(img);
-    img.onerror = reject;
-    img.src = logoDataUrl();
-  });
-}
-
 function cssFont(variable: string, fallback: string): string {
   const value = getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
   return value || fallback;
 }
 
-async function loadPhoto(photoUrl: string): Promise<ImageBitmap> {
-  // Fetching first keeps the canvas untainted for signed Supabase URLs on another origin.
-  const res = await fetch(photoUrl);
-  return createImageBitmap(await res.blob());
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
+/** The photo is a local blob: or data: URL, so it never taints the canvas. */
+async function loadPhoto(photoUrl: string): Promise<CanvasImageSource & { width: number; height: number }> {
+  if (typeof createImageBitmap === "function") {
+    try {
+      return await createImageBitmap(await (await fetch(photoUrl)).blob());
+    } catch {
+      // Some in-app browsers (e.g. Instagram's on Android) lack this path; fall back to an <img>.
+    }
+  }
+  return loadImage(photoUrl);
+}
+
+/** Waits for the app fonts, but never longer than a moment: an in-app browser may never resolve this. */
+async function loadFonts(specs: string[]): Promise<void> {
+  try {
+    if (!document.fonts?.load) return;
+    await Promise.race([Promise.all(specs.map((f) => document.fonts.load(f))), new Promise((r) => setTimeout(r, 1500))]);
+  } catch {
+    // Canvas falls back to the system font.
+  }
+}
+
+/** JPEG keeps the card small (~300 KB) for sharing; toDataURL covers browsers where toBlob fails. */
+async function exportJpeg(canvas: HTMLCanvasElement): Promise<Blob> {
+  const blob = await new Promise<Blob | null>((resolve) => {
+    try {
+      canvas.toBlob(resolve, "image/jpeg", 0.92);
+    } catch {
+      resolve(null);
+    }
+  });
+  if (blob) return blob;
+  const [meta, data] = canvas.toDataURL("image/jpeg", 0.92).split(",");
+  const bytes = Uint8Array.from(atob(data), (c) => c.charCodeAt(0));
+  return new Blob([bytes], { type: meta.slice(5).split(";")[0] || "image/jpeg" });
 }
 
 function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxLines: number): string[] {
@@ -49,8 +79,15 @@ function wrapLines(ctx: CanvasRenderingContext2D, text: string, maxWidth: number
 }
 
 function pill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number) {
+  const r = h / 2;
+  // Drawn with arcs rather than roundRect(), which older WebViews don't have.
   ctx.beginPath();
-  ctx.roundRect(x, y, w, h, h / 2);
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arc(x + w - r, y + r, r, -Math.PI / 2, Math.PI / 2);
+  ctx.lineTo(x + r, y + h);
+  ctx.arc(x + r, y + r, r, Math.PI / 2, Math.PI * 1.5);
+  ctx.closePath();
   ctx.fill();
 }
 
@@ -58,7 +95,7 @@ function pill(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h:
 export async function renderShareCard(scan: Scan, photoUrl: string | null, siteHost: string): Promise<Blob> {
   const display = cssFont("--font-display", "sans-serif");
   const body = cssFont("--font-body", "sans-serif");
-  await Promise.all([document.fonts.load(`800 100px ${display}`), document.fonts.load(`700 40px ${body}`)]);
+  await loadFonts([`800 100px ${display}`, `700 40px ${body}`]);
 
   const canvas = document.createElement("canvas");
   canvas.width = W;
@@ -86,7 +123,7 @@ export async function renderShareCard(scan: Scan, photoUrl: string | null, siteH
   ctx.fillStyle = top;
   ctx.fillRect(0, 0, W, 260);
   try {
-    ctx.drawImage(await loadLogo(), 54, 54, 80, 80);
+    ctx.drawImage(await loadImage(logoDataUrl()), 54, 54, 80, 80);
   } catch {
     // Card still works with just the name.
   }
@@ -158,5 +195,5 @@ export async function renderShareCard(scan: Scan, photoUrl: string | null, siteH
   ctx.font = `700 36px ${body}`;
   ctx.fillText(`What's your score? Try Drippy · ${siteHost}`, cx, H - 110);
 
-  return canvasToBlob(canvas, "image/png");
+  return exportJpeg(canvas);
 }

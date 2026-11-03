@@ -45,5 +45,3 @@ export async function thumbnailDataUrl(blob: Blob): Promise<string> {
   const small = await normalizePhoto(blob, 360, 0.7);
   return `data:image/jpeg;base64,${await blobToBase64(small)}`;
 }
-
-export { canvasToBlob };

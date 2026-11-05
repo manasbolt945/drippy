@@ -15,7 +15,7 @@ supabase/       Postgres schema + `score-fit` edge function (Claude vision)
 1. The app signs in anonymously, so the first scan needs no setup.
 2. The photo is resized to 1280px, sent as JPEG to the `score-fit` edge function.
 3. The function checks the daily limits (`FREE_DAILY_SCANS` rated photos, default 10; `MAX_DAILY_ATTEMPTS` of any kind, default 30), then asks `claude-haiku-5-5` to rate the outfit against a fixed rubric with a JSON-schema response.
-4. If the photo is scorable it is stored privately in the `scans` bucket. Off-topic, explicit or under-16 photos are never stored.
+4. The rating is saved in `scans`. The photo itself is kept (privately, in the `scans` bucket) only for scored fits and only while the `SAVE_PHOTOS` flag is on; off-topic, explicit or under-16 photos are never stored.
 5. The result row is saved in `scans` and returned. Clients can read only their own scans and can never write a score themselves.
 
 The AI judges clothes, colors, fit and styling only, never the person's body or face (see `supabase/functions/score-fit/prompt.ts`).

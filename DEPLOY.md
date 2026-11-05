@@ -78,9 +78,16 @@ Then open the Vercel URL on your phone (the camera works there because it's HTTP
 | Real Claude spend | https://platform.claude.com → **Usage** and **Cost** |
 | Site traffic | Vercel → project → **Analytics** (turn on Web Analytics, free) and **Logs** |
 
-Log events from `score-fit` (JSON, never the photo): `request.received` (user, photo size, occasion), `ai.response` (model, stop reason, time, tokens), `scan.scored` (score, best occasion, headline), `scan.not_scorable`, `scan.refused`, `ai.error`, `ai.bad_output`, `scan.insert_failed`, and `request.done` (HTTP status, total time) for every request, including rejected ones with a `reason`.
+Log events from `score-fit` (JSON, never the photo): `request.received` (user, photo size, occasion), `ai.response` (model, stop reason, time, tokens), `scan.scored` (score, best occasion, headline), `scan.not_scorable`, `scan.refused`, `ai.error`, `ai.bad_output`, `scan.insert_failed`, `photo.saved`, `photo.save_failed`, and `request.done` (HTTP status, total time) for every request, including rejected ones with a `reason`.
 
-Photos are **not stored**: they're sent to Claude for the rating and then dropped. History thumbnails live only in each person's browser.
+Photos are stored only while the `SAVE_PHOTOS` flag is on (**currently on**, since 5 Nov 2026). With it on, each **scored** photo is kept in the private `scans` bucket at `<user_id>/<scan_id>.jpg`, and `scans.image_path` points to it; refused and not-scorable photos are never kept. Log events: `photo.saved` / `photo.save_failed`, and `request.done` has `photo_saved`. History thumbnails still live only in each person's browser.
+
+```bash
+npx supabase@3.0.0 secrets set SAVE_PHOTOS=true    # start keeping photos
+npx supabase@3.0.0 secrets set SAVE_PHOTOS=false   # stop (photos already saved stay until deleted)
+```
+
+See the stored photos under Storage → scans in the dashboard.
 
 Handy SQL:
 

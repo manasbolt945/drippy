@@ -1,5 +1,5 @@
 // score-fit: rate an outfit photo with Claude and save the result.
-// The photo is only sent to Claude for the rating; it is never stored.
+// The photo is sent to Claude for the rating. It is stored only while SAVE_PHOTOS is on (see savePhoto()).
 // Every step logs one JSON line (see log()), visible under Edge Functions → score-fit → Logs.
 //
 // POST { image_base64: string (JPEG), occasion_hint?: OccasionId }
@@ -17,6 +17,9 @@ const FREE_DAILY_SCANS = Number(Deno.env.get("FREE_DAILY_SCANS") ?? "10");
 // Photos we can't rate don't use up free scans, but every attempt still costs an AI call, so cap those too.
 const MAX_DAILY_ATTEMPTS = Number(Deno.env.get("MAX_DAILY_ATTEMPTS") ?? "30");
 const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+// Flag: keep a copy of each scored photo in the private `scans` bucket (<user_id>/<scan_id>.jpg).
+// Turn on/off without a redeploy: `supabase secrets set SAVE_PHOTOS=true` (or false).
+const SAVE_PHOTOS = (Deno.env.get("SAVE_PHOTOS") ?? "").toLowerCase() === "true";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const admin = createClient(SUPABASE_URL, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -143,8 +146,8 @@ async function handle(req: Request): Promise<Response> {
   };
   log("info", "ai.response", { scan_id: scanId, model: response.model, stop_reason: response.stop_reason, ...usage });
 
-  // Photos are never stored: only the rating is saved. The app keeps its own thumbnail on the phone.
-  const baseRow = { id: scanId, user_id: user.id, occasion_hint: occasionHint, model: response.model, image_path: null, ...usage };
+  // Only the rating is saved here; the photo is saved further down, for scored fits, when SAVE_PHOTOS is on.
+  const baseRow = { id: scanId, user_id: user.id, occasion_hint: occasionHint, model: response.model, image_path: null as string | null, ...usage };
 
   if (response.stop_reason === "refusal") {
     log("warn", "scan.refused", { scan_id: scanId, category: response.stop_details?.category });
@@ -174,15 +177,30 @@ async function handle(req: Request): Promise<Response> {
 
   const best = rating.occasions[0];
   log("info", "scan.scored", { scan_id: scanId, overall: rating.overall, best_occasion: best?.occasion, best_score: best?.score, headline: rating.headline });
+  // Only scored fits: refused and not-scorable photos (which can include explicit images or minors) are never kept.
+  const imagePath = SAVE_PHOTOS ? await savePhoto(scanId, user.id, imageBytes) : null;
   return done(await insertScan({
     ...baseRow,
+    image_path: imagePath,
     status: "scored",
     overall: rating.overall,
     headline: rating.headline,
     breakdown: rating.breakdown,
     occasions: rating.occasions,
     tips: rating.tips.slice(0, 3),
-  }), { result: "scored", overall: rating.overall });
+  }), { result: "scored", overall: rating.overall, photo_saved: !!imagePath });
+}
+
+/** Stores the photo in the private bucket. A failed upload is logged but never fails the scan. */
+async function savePhoto(scanId: string, userId: string, bytes: Uint8Array): Promise<string | null> {
+  const path = `${userId}/${scanId}.jpg`;
+  const { error } = await admin.storage.from("scans").upload(path, bytes, { contentType: "image/jpeg" });
+  if (error) {
+    log("error", "photo.save_failed", { scan_id: scanId, error: error.message });
+    return null;
+  }
+  log("info", "photo.saved", { scan_id: scanId, path, image_bytes: bytes.length });
+  return path;
 }
 
 async function insertScan(row: Record<string, unknown>): Promise<Response> {

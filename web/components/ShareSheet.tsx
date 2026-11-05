@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { blobToBase64 } from "@/lib/image";
 import { chromeIntentUrl, isAndroid, isInAppBrowser } from "@/lib/inApp";
+import { heroFor } from "@/lib/hero";
+import { occasionLabel } from "@/lib/occasions";
 import { renderShareCard } from "@/lib/shareCard";
 import type { Scan } from "@/lib/types";
 import { Close, Share } from "./icons";
@@ -12,6 +14,8 @@ interface Props {
   photoUrl: string | null;
   /** Draw the verdict as the mascot's thought (off when the user dismissed it on the result screen). */
   showVerdict: boolean;
+  /** The occasion the big score is for (null = overall), matching the result screen. */
+  occasion: string | null;
   onClose: () => void;
 }
 
@@ -20,7 +24,8 @@ interface Props {
  * In app browsers (Instagram, Facebook…) neither works: on Android, Share reopens Drippy in Chrome;
  * on iPhone it asks you to press and hold the card to save it.
  */
-export default function ShareSheet({ scan, photoUrl, showVerdict, onClose }: Props) {
+export default function ShareSheet({ scan, photoUrl, showVerdict, occasion, onClose }: Props) {
+  const hero = heroFor(scan, occasion);
   const [file, setFile] = useState<File | null>(null);
   // A data: URL rather than a blob: URL, so press-and-hold "Save image" works in in-app browsers too.
   const [src, setSrc] = useState<string | null>(null);
@@ -32,12 +37,12 @@ export default function ShareSheet({ scan, photoUrl, showVerdict, onClose }: Pro
   useEffect(() => {
     let live = true;
     setHoldHint(false);
-    renderShareCard(scan, photoUrl, window.location.host, { showVerdict })
+    renderShareCard(scan, photoUrl, window.location.host, { showVerdict, occasion })
       .then(async (blob) => {
         const type = blob.type || "image/jpeg";
         const dataUrl = `data:${type};base64,${await blobToBase64(blob)}`;
         if (!live) return;
-        setFile(new File([blob], `drippy-${scan.overall ?? "fit"}.jpg`, { type }));
+        setFile(new File([blob], `drippy-${hero.value}.jpg`, { type }));
         setSrc(dataUrl);
       })
       .catch((err) => {
@@ -47,14 +52,14 @@ export default function ShareSheet({ scan, photoUrl, showVerdict, onClose }: Pro
     return () => {
       live = false;
     };
-  }, [scan, photoUrl, showVerdict]);
+  }, [scan, photoUrl, showVerdict, occasion]);
 
   async function share() {
     if (!file || !src) return;
     const canShareFile = typeof navigator.canShare === "function" && navigator.canShare({ files: [file] });
     if (canShareFile) {
       try {
-        await navigator.share({ files: [file], text: `My fit scored ${scan.overall} on Drippy. What's yours? ${window.location.origin}` });
+        await navigator.share({ files: [file], text: `My fit scored ${hero.value}${hero.occasion ? ` for ${occasionLabel(hero.occasion)}` : ""} on Drippy. What's yours? ${window.location.origin}` });
         return;
       } catch (err) {
         if ((err as DOMException)?.name === "AbortError") return; // closed the share sheet

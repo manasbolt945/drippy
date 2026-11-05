@@ -1,4 +1,5 @@
 import { logoDataUrl } from "./logo";
+import { bestTiles, heroFor } from "./hero";
 import { moodFor, moodSvgDataUrl } from "./mood";
 import { occasionLabel } from "./occasions";
 import { type Scan, scoreHex } from "./types";
@@ -134,7 +135,7 @@ export async function renderShareCard(
   scan: Scan,
   photoUrl: string | null,
   siteHost: string,
-  { showVerdict = true }: { showVerdict?: boolean } = {},
+  { showVerdict = true, occasion = null }: { showVerdict?: boolean; occasion?: string | null } = {},
 ): Promise<Blob> {
   const display = cssFont("--font-display", "sans-serif");
   const body = cssFont("--font-body", "sans-serif");
@@ -144,7 +145,9 @@ export async function renderShareCard(
   canvas.width = W;
   canvas.height = H;
   const ctx = canvas.getContext("2d")!;
-  const value = scan.overall ?? 0;
+  // Same big score as the result screen: the occasion shown there, or the overall score.
+  const hero = heroFor(scan, occasion);
+  const value = hero.value;
 
   // Photo, full bleed, with a soft darkening towards the bottom
   ctx.fillStyle = "#0B1026";
@@ -181,14 +184,14 @@ export async function renderShareCard(
   ctx.textAlign = "left";
   ctx.fillText("Drippy", 162, 102);
 
-  // Bottom: the glass sheet
-  const sheetTop = 1390;
+  // Bottom: the glass sheet (shorter when no other occasion is worth showing)
+  const best = bestTiles(scan, hero.occasion);
+  const sheetTop = best.length ? 1390 : 1560;
   glass(ctx, bg, () => roundedPath(ctx, 0, sheetTop, W, H - sheetTop + 90, 90, false), true);
 
   // Best for: three glass tiles
-  const best = [...(scan.occasions ?? [])].sort((a, b) => b.score - a.score).slice(0, 3);
   const gap = 24;
-  const tw = (W - 96 - gap * 2) / 3;
+  const tw = best.length ? (W - 96 - gap * (best.length - 1)) / best.length : 0;
   const ty = sheetTop + 172;
   best.forEach((o, i) => {
     const x = 48 + i * (tw + gap);
@@ -229,8 +232,12 @@ export async function renderShareCard(
   ctx.font = `800 92px ${display}`;
   ctx.fillText(String(value), cx, cy - 6);
   ctx.fillStyle = "rgba(244,239,227,0.75)";
-  ctx.font = `700 24px ${body}`;
-  ctx.fillText("O V E R A L L", cx, cy + 56);
+  // Spaced-out letters for short labels; long ones ("DATE NIGHT") shrink to fit inside the ring.
+  const label = hero.label.length <= 7 ? hero.label.split("").join(" ") : hero.label;
+  let size = 24;
+  ctx.font = `700 ${size}px ${body}`;
+  while (ctx.measureText(label).width > 170 && size > 14) ctx.font = `700 ${--size}px ${body}`;
+  ctx.fillText(label, cx, cy + 56);
 
   // Mascot perched on top of the ring, in its mood for this score (drawn 130/100 larger to fit its effects)
   const m = 176;
@@ -243,9 +250,9 @@ export async function renderShareCard(
   }
 
   // The verdict as the mascot's thought: a glass cloud above it, with two little bubbles trailing down
-  if (showVerdict && scan.headline) {
+  if (showVerdict && hero.text) {
     ctx.font = `700 50px ${display}`;
-    const lines = wrapLines(ctx, scan.headline, 780, 3);
+    const lines = wrapLines(ctx, hero.text, 780, 3);
     const lh = 62;
     const cw = Math.min(900, Math.max(...lines.map((l) => ctx.measureText(l).width)) + 104);
     const ch = lines.length * lh + 80;

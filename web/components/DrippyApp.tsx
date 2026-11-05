@@ -38,7 +38,7 @@ export default function DrippyApp() {
   const [view, setView] = useState<View>({ name: "boot" });
   const [photo, setPhoto] = useState<Photo | null>(null);
   const [occasion, setOccasion] = useState<OccasionId | null>(null);
-  const [sharing, setSharing] = useState<{ showVerdict: boolean } | null>(null);
+  const [sharing, setSharing] = useState<{ showVerdict: boolean; occasion: string | null } | null>(null);
   const [splashDone, setSplashDone] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -137,7 +137,7 @@ export default function DrippyApp() {
               Sample result · backend not connected
             </div>
           )}
-          {sharing && <ShareSheet scan={view.scan} photoUrl={view.photoUrl} showVerdict={sharing.showVerdict} onClose={() => setSharing(null)} />}
+          {sharing && <ShareSheet scan={view.scan} photoUrl={view.photoUrl} showVerdict={sharing.showVerdict} occasion={sharing.occasion} onClose={() => setSharing(null)} />}
         </>
       );
       break;

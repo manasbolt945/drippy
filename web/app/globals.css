@@ -193,6 +193,7 @@ img { display: block; }
   transition: height .38s cubic-bezier(.2, .9, .3, 1);
 }
 .r-sheet.open { height: 86%; }
+.r-sheet.compact:not(.open) { height: calc(140px + var(--safe-bottom)); } /* no Best for tiles to show */
 .r-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 24px; }
 .r-sheet:not(.open) .r-body { overflow: hidden; }
 .r-perch {

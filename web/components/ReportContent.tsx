@@ -19,7 +19,7 @@ export default function ReportContent({ scan }: { scan: Scan }) {
     <div style={{ display: "flex", flexDirection: "column", gap: 26 }}>
       {scan.headline && (
         <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-          <span className="label">Verdict</span>
+          <span className="label">Verdict · Overall {scan.overall}</span>
           <p className="display" style={{ margin: 0, fontWeight: 700, fontSize: 18, lineHeight: 1.25 }}>{scan.headline}</p>
         </section>
       )}

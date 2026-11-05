@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { occasionLabel } from "@/lib/occasions";
+import { bestTiles, defaultHeroOccasion, heroFor } from "@/lib/hero";
 import { type Scan, scoreHex } from "@/lib/types";
 import { Close, Share } from "./icons";
 import Mascot from "./Mascot";
@@ -11,8 +12,11 @@ interface Props {
   scan: Scan;
   photoUrl: string | null;
   onClose: () => void;
-  /** Share the story card; `showVerdict` mirrors whether the thought bubble is showing. */
-  onShare: (opts: { showVerdict: boolean }) => void;
+  /**
+   * Share the story card for what's on screen: `occasion` is the big score's occasion (null = overall),
+   * `showVerdict` mirrors whether the thought bubble is showing.
+   */
+  onShare: (opts: { showVerdict: boolean; occasion: string | null }) => void;
 }
 
 const RC = 2 * Math.PI * 40;
@@ -44,14 +48,13 @@ export default function Result({ scan, photoUrl, onClose, onShare }: Props) {
   const [thought, setThought] = useState(true);
   const [open, setOpen] = useState(false);
 
-  const occasions = [...(scan.occasions ?? [])].sort((a, b) => b.score - a.score);
-  const focused = occasions.find((o) => o.occasion === focus);
-  const value = focused ? focused.score : scan.overall ?? 0;
-  const label = focused ? occasionLabel(focused.occasion).toUpperCase() : "OVERALL";
-  const text = focused ? focused.reason : scan.headline;
+  // Opens on the occasion picked before rating (or the overall score); tapping a tile switches to that one.
+  const defaultOccasion = defaultHeroOccasion(scan);
+  const { occasion: heroOccasion, value, label, text } = heroFor(scan, focus ?? defaultOccasion);
+  const tiles = bestTiles(scan, defaultOccasion);
 
-  // The story card shows the verdict only if it's showing here too.
-  const share = () => onShare({ showVerdict: thought });
+  // The story card shows the same score, and the verdict only if it's showing here too.
+  const share = () => onShare({ showVerdict: thought, occasion: heroOccasion });
 
   const pick = (occasion: string) => {
     setFocus(focus === occasion ? null : occasion);
@@ -71,10 +74,10 @@ export default function Result({ scan, photoUrl, onClose, onShare }: Props) {
         <button type="button" className="icon-btn glass" aria-label="Share" onClick={share}><Share /></button>
       </div>
 
-      <div className={`r-sheet glass-dark${open ? " open" : ""}`}>
+      <div className={`r-sheet glass-dark${open ? " open" : ""}${tiles.length ? "" : " compact"}`}>
         {/* The mascot's thought: the verdict, or the reason for the occasion you picked. Tap it to dismiss. */}
         {thought && !open && text && (
-          <div className="r-thought" key={`${focus}-${value}`} aria-live="polite">
+          <div className="r-thought" key={`${heroOccasion}-${value}`} aria-live="polite">
             <span className="r-dot big" /><span className="r-dot small" />
             <button type="button" className="glass-dark r-cloud" aria-label="Hide the verdict" onClick={() => setThought(false)}>
               <p className="display">{text}</p>
@@ -97,7 +100,7 @@ export default function Result({ scan, photoUrl, onClose, onShare }: Props) {
 
         <div className="r-body scroll">
           <div style={{ display: "flex", gap: 8 }} role="radiogroup" aria-label="Show the score for an occasion">
-            {occasions.slice(0, 3).map((o) => (
+            {tiles.map((o) => (
               <button
                 key={o.occasion}
                 type="button"

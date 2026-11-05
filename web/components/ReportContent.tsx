@@ -1,5 +1,6 @@
 "use client";
 
+import type { Hero } from "@/lib/hero";
 import { occasionLabel } from "@/lib/occasions";
 import { type Scan, scoreColor } from "@/lib/types";
 import { Layers, Palette, Ruler, Sparkle } from "./icons";
@@ -11,12 +12,22 @@ const BARS = [
   ["cohesion", "Cohesion", <Layers key="l" />],
 ] as const;
 
-/** The full report: verdict, breakdown, every occasion with its reason, and tips. Shown when the result sheet slides up. */
-export default function ReportContent({ scan }: { scan: Scan }) {
+/**
+ * The insights, shown when the result sheet slides up: the note for the occasion on screen (if one is picked),
+ * the overall verdict, the breakdown, every occasion with its reason, and tips.
+ */
+export default function ReportContent({ scan, hero }: { scan: Scan; hero?: Hero }) {
   const occasions = [...(scan.occasions ?? [])].sort((a, b) => b.score - a.score);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 26 }}>
+      {hero?.occasion && hero.text && (
+        <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+          <span className="label">{occasionLabel(hero.occasion)} · {hero.value}</span>
+          <p className="display" style={{ margin: 0, fontWeight: 700, fontSize: 18, lineHeight: 1.25 }}>{hero.text}</p>
+        </section>
+      )}
+
       {scan.headline && (
         <section style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <span className="label">Verdict · Overall {scan.overall}</span>

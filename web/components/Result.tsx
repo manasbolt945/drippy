@@ -12,11 +12,8 @@ interface Props {
   scan: Scan;
   photoUrl: string | null;
   onClose: () => void;
-  /**
-   * Share the story card for what's on screen: `occasion` is the big score's occasion (null = overall),
-   * `showVerdict` mirrors whether the thought bubble is showing.
-   */
-  onShare: (opts: { showVerdict: boolean; occasion: string | null }) => void;
+  /** Share the story card for what's on screen: the big score's occasion (null = overall). */
+  onShare: (occasion: string | null) => void;
 }
 
 const RC = 2 * Math.PI * 40;
@@ -40,26 +37,23 @@ function GlassRing({ value, label }: { value: number; label: string }) {
 
 /**
  * Full-photo result with a liquid-glass peek sheet (design canvas "Peek sheet D1"):
- * the score ring sits on the sheet's edge with the mascot perched on it, reacting to the score,
- * and the verdict floats above as the mascot's thought. The arrow slides the sheet up into the full report.
+ * the score ring sits on the sheet's edge with the mascot perched on it, reacting to the score.
+ * The arrow slides the sheet up into the insights, which start with the verdict.
  */
 export default function Result({ scan, photoUrl, onClose, onShare }: Props) {
   const [focus, setFocus] = useState<string | null>(null);
-  const [thought, setThought] = useState(true);
   const [open, setOpen] = useState(false);
 
   // Opens on the occasion picked before rating (or the overall score); tapping a tile switches to that one.
   const defaultOccasion = defaultHeroOccasion(scan);
-  const { occasion: heroOccasion, value, label, text } = heroFor(scan, focus ?? defaultOccasion);
+  const hero = heroFor(scan, focus ?? defaultOccasion);
+  const { occasion: heroOccasion, value, label } = hero;
   const tiles = bestTiles(scan, defaultOccasion);
 
-  // The story card shows the same score, and the verdict only if it's showing here too.
-  const share = () => onShare({ showVerdict: thought, occasion: heroOccasion });
+  // The story card shows the same score.
+  const share = () => onShare(heroOccasion);
 
-  const pick = (occasion: string) => {
-    setFocus(focus === occasion ? null : occasion);
-    setThought(true);
-  };
+  const pick = (occasion: string) => setFocus(focus === occasion ? null : occasion);
 
   return (
     <div className="screen" style={{ background: "#0B1026" }}>
@@ -75,25 +69,10 @@ export default function Result({ scan, photoUrl, onClose, onShare }: Props) {
       </div>
 
       <div className={`r-sheet glass-dark${open ? " open" : ""}${tiles.length ? "" : " compact"}`}>
-        {/* The mascot's thought: the verdict, or the reason for the occasion you picked. Tap it to dismiss. */}
-        {thought && !open && text && (
-          <div className="r-thought" key={`${heroOccasion}-${value}`} aria-live="polite">
-            <span className="r-dot big" /><span className="r-dot small" />
-            <button type="button" className="glass-dark r-cloud" aria-label="Hide the verdict" onClick={() => setThought(false)}>
-              <p className="display">{text}</p>
-            </button>
-          </div>
-        )}
-        {/* While it's hidden, a little "…" by the mascot's head hints that it has something to say */}
-        {!thought && !open && text && (
-          <button type="button" className="r-hint glass-dark" aria-label="Show the verdict" onClick={() => setThought(true)}>
-            <span /><span /><span />
-          </button>
-        )}
-        <button type="button" className="r-perch" aria-label={thought ? "Hide the verdict" : "Show the verdict"} onClick={() => setThought(!thought)}>
+        <div className="r-perch" role="img" aria-label={`${label.toLowerCase()} score ${value}`}>
           <span className="r-mascot"><Mascot size={MASCOT} mode="mood" score={value} /></span>
           <span className="r-badge glass"><GlassRing value={value} label={label} /></span>
-        </button>
+        </div>
         <button type="button" className="r-chev glass" aria-label={open ? "Close the full report" : "See the full report"} aria-expanded={open} onClick={() => setOpen(!open)}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" style={{ transform: open ? "rotate(180deg)" : "none", transition: "transform .3s" }}><path d="M6 15l6-6 6 6" /></svg>
         </button>
@@ -114,7 +93,7 @@ export default function Result({ scan, photoUrl, onClose, onShare }: Props) {
               </button>
             ))}
           </div>
-          {open && <ReportContent scan={scan} />}
+          {open && <ReportContent scan={scan} hero={hero} />}
         </div>
 
         <div style={{ display: "flex", gap: 10 }}>

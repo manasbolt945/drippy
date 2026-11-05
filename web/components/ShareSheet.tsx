@@ -12,8 +12,6 @@ import { Close, Share } from "./icons";
 interface Props {
   scan: Scan;
   photoUrl: string | null;
-  /** Draw the verdict as the mascot's thought (off when the user dismissed it on the result screen). */
-  showVerdict: boolean;
   /** The occasion the big score is for (null = overall), matching the result screen. */
   occasion: string | null;
   onClose: () => void;
@@ -24,7 +22,7 @@ interface Props {
  * In app browsers (Instagram, Facebook…) neither works: on Android, Share reopens Drippy in Chrome;
  * on iPhone it asks you to press and hold the card to save it.
  */
-export default function ShareSheet({ scan, photoUrl, showVerdict, occasion, onClose }: Props) {
+export default function ShareSheet({ scan, photoUrl, occasion, onClose }: Props) {
   const hero = heroFor(scan, occasion);
   const [file, setFile] = useState<File | null>(null);
   // A data: URL rather than a blob: URL, so press-and-hold "Save image" works in in-app browsers too.
@@ -37,7 +35,7 @@ export default function ShareSheet({ scan, photoUrl, showVerdict, occasion, onCl
   useEffect(() => {
     let live = true;
     setHoldHint(false);
-    renderShareCard(scan, photoUrl, window.location.host, { showVerdict, occasion })
+    renderShareCard(scan, photoUrl, window.location.host, { occasion })
       .then(async (blob) => {
         const type = blob.type || "image/jpeg";
         const dataUrl = `data:${type};base64,${await blobToBase64(blob)}`;
@@ -52,7 +50,7 @@ export default function ShareSheet({ scan, photoUrl, showVerdict, occasion, onCl
     return () => {
       live = false;
     };
-  }, [scan, photoUrl, showVerdict, occasion]);
+  }, [scan, photoUrl, occasion]);
 
   async function share() {
     if (!file || !src) return;

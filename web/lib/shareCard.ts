@@ -129,13 +129,14 @@ function glass(ctx: CanvasRenderingContext2D, bg: HTMLCanvasElement, shape: () =
 
 /**
  * The 9:16 story image, matching the result screen: full photo, a glass sheet with the score ring on its edge,
- * the mascot perched on top (in its mood for this score), the verdict as its thought (unless the user hid it), and the best occasions.
+ * the mascot perched on top (in its mood for this score), and the best occasions. Like the result screen,
+ * the verdict stays off the card unless `showVerdict` is set (then it's drawn as the mascot's thought).
  */
 export async function renderShareCard(
   scan: Scan,
   photoUrl: string | null,
   siteHost: string,
-  { showVerdict = true, occasion = null }: { showVerdict?: boolean; occasion?: string | null } = {},
+  { showVerdict = false, occasion = null }: { showVerdict?: boolean; occasion?: string | null } = {},
 ): Promise<Blob> {
   const display = cssFont("--font-display", "sans-serif");
   const body = cssFont("--font-body", "sans-serif");

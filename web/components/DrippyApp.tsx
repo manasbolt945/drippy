@@ -38,7 +38,8 @@ export default function DrippyApp() {
   const [view, setView] = useState<View>({ name: "boot" });
   const [photo, setPhoto] = useState<Photo | null>(null);
   const [occasion, setOccasion] = useState<OccasionId | null>(null);
-  const [sharing, setSharing] = useState<{ showVerdict: boolean; occasion: string | null } | null>(null);
+  // The occasion whose story card is being shared (null = overall); undefined = not sharing.
+  const [sharing, setSharing] = useState<string | null | undefined>(undefined);
   const [splashDone, setSplashDone] = useState(false);
   const [finishing, setFinishing] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -103,7 +104,7 @@ export default function DrippyApp() {
   }, [occasion, photo]);
 
   const toCamera = useCallback(() => {
-    setSharing(null);
+    setSharing(undefined);
     setView({ name: "camera" });
   }, []);
 
@@ -137,7 +138,7 @@ export default function DrippyApp() {
               Sample result · backend not connected
             </div>
           )}
-          {sharing && <ShareSheet scan={view.scan} photoUrl={view.photoUrl} showVerdict={sharing.showVerdict} occasion={sharing.occasion} onClose={() => setSharing(null)} />}
+          {sharing !== undefined && <ShareSheet scan={view.scan} photoUrl={view.photoUrl} occasion={sharing} onClose={() => setSharing(undefined)} />}
         </>
       );
       break;

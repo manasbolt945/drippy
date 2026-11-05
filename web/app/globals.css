@@ -197,8 +197,7 @@ img { display: block; }
 .r-body { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 24px; }
 .r-sheet:not(.open) .r-body { overflow: hidden; }
 .r-perch {
-  position: absolute; left: 50%; top: -92px; width: 96px; margin-left: -48px; padding: 0; border: 0; background: none; cursor: pointer;
-  display: flex; flex-direction: column; align-items: center;
+  position: absolute; left: 50%; top: -92px; width: 96px; margin-left: -48px; display: flex; flex-direction: column; align-items: center;
 }
 .r-mascot { display: block; height: 60px; margin-bottom: -16px; position: relative; z-index: 1; }
 .r-badge { width: 96px; height: 96px; border-radius: 999px; display: flex; align-items: center; justify-content: center; }
@@ -213,28 +212,7 @@ img { display: block; }
 .r-tile:active { transform: scale(0.97); }
 .r-tile.on { border-color: var(--gold); background: rgba(230, 181, 71, .16); }
 
-/* The mascot's thought: a glass cloud with two little bubbles trailing to its head */
-@keyframes r-pop { 0% { opacity: 0; transform: translateY(10px) scale(.85); } 70% { opacity: 1; transform: translateY(-2px) scale(1.03); } 100% { opacity: 1; transform: none; } }
-.r-thought {
-  position: absolute; left: 0; right: 0; bottom: calc(100% + 100px); padding: 0 20px;
-  display: flex; justify-content: center; pointer-events: none; animation: r-pop .45s .35s cubic-bezier(.3, 1.4, .5, 1) both; transform-origin: 55% 100%;
-}
-.r-cloud { max-width: 300px; border-radius: 24px; padding: 12px 16px; text-align: center; font: inherit; cursor: pointer; pointer-events: auto; }
-.r-cloud:active { transform: scale(0.98); }
-@keyframes r-hint-in { from { opacity: 0; transform: scale(.5); } to { opacity: 1; transform: none; } }
-@keyframes r-hint-dot { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
-.r-hint {
-  position: absolute; left: calc(50% + 22px); top: -128px; height: 26px; padding: 0 9px; border-radius: 999px; cursor: pointer;
-  display: flex; align-items: center; gap: 4px; animation: r-hint-in .3s ease-out both;
-}
-.r-hint span { width: 5px; height: 5px; border-radius: 99px; background: var(--text); animation: r-hint-dot 1.2s ease-in-out infinite; }
-.r-hint span:nth-child(2) { animation-delay: .2s; }
-.r-hint span:nth-child(3) { animation-delay: .4s; }
-.r-cloud p { margin: 0; font-weight: 700; font-size: 16px; line-height: 1.25; }
-.r-dot { position: absolute; border-radius: 999px; background: rgba(30, 38, 72, .7); border: 1px solid rgba(255, 255, 255, .22); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
-.r-dot.big { width: 13px; height: 13px; left: calc(50% + 30px); bottom: -17px; }
-.r-dot.small { width: 7px; height: 7px; left: calc(50% + 24px); bottom: -29px; }
-@media (prefers-reduced-motion: reduce) { .r-thought { animation: none; } .r-sheet { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .r-sheet { transition: none; } }
 
 /* Share sheet in in-app browsers: point at the card, which you press and hold to save */
 @keyframes card-hold { 0%, 100% { box-shadow: 0 0 0 2px rgba(230, 181, 71, .9), 0 20px 60px rgba(0, 0, 0, .5); } 50% { box-shadow: 0 0 0 6px rgba(230, 181, 71, .35), 0 20px 60px rgba(0, 0, 0, .5); } }

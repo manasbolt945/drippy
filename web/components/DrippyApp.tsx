@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DEMO_MODE, ScoreError, scoreFit } from "@/lib/backend";
 import { normalizePhoto } from "@/lib/image";
+import { escapeInAppBrowserOnce } from "@/lib/inApp";
 import type { OccasionId } from "@/lib/occasions";
 import type { Scan } from "@/lib/types";
 import Camera from "./Camera";
@@ -44,6 +45,9 @@ export default function DrippyApp() {
   const endSplash = useCallback(() => setSplashDone(true), []);
 
   useEffect(() => {
+    // Opened from a story link on Android? Instagram's browser can't share or save images, so reopen in Chrome.
+    // Keep loading anyway: if the hand-off is blocked, the app still works here.
+    escapeInAppBrowserOnce();
     let welcomed = false;
     try {
       welcomed = localStorage.getItem(WELCOMED_KEY) === "1";

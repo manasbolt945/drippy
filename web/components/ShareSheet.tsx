@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { blobToBase64 } from "@/lib/image";
-import { isInAppBrowser } from "@/lib/inApp";
+import { chromeIntentUrl, isAndroid, isInAppBrowser } from "@/lib/inApp";
 import { renderShareCard } from "@/lib/shareCard";
 import type { Scan } from "@/lib/types";
 import { Close, Share } from "./icons";
@@ -17,7 +17,8 @@ interface Props {
 
 /**
  * The story card and one Share button: the phone's share sheet where the browser allows it, else a download.
- * In app browsers (Instagram, Facebook…) neither works, so Share asks you to press and hold the card to save it.
+ * In app browsers (Instagram, Facebook…) neither works: on Android, Share reopens Drippy in Chrome;
+ * on iPhone it asks you to press and hold the card to save it.
  */
 export default function ShareSheet({ scan, photoUrl, showVerdict, onClose }: Props) {
   const [file, setFile] = useState<File | null>(null);
@@ -25,6 +26,8 @@ export default function ShareSheet({ scan, photoUrl, showVerdict, onClose }: Pro
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [holdHint, setHoldHint] = useState(false);
+  // Android in-app browsers can't share, download or long-press-save images at all: offer Chrome instead.
+  const [stuckOnAndroid] = useState(() => isInAppBrowser() && isAndroid());
 
   useEffect(() => {
     let live = true;
@@ -58,7 +61,7 @@ export default function ShareSheet({ scan, photoUrl, showVerdict, onClose }: Pro
       }
     }
     if (isInAppBrowser()) {
-      // Instagram's browser can't share or download files, but it can save a pressed-and-held image.
+      // Instagram's iPhone browser can't share or download files, but it can save a pressed-and-held image.
       setHoldHint(true);
       return;
     }
@@ -94,6 +97,11 @@ export default function ShareSheet({ scan, photoUrl, showVerdict, onClose }: Pro
           </svg>
           Press and hold the card to save it
         </div>
+      ) : stuckOnAndroid ? (
+        <a className="btn btn-gold" style={{ width: "100%", maxWidth: 340 }} href={chromeIntentUrl(window.location.origin + "/")}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" /></svg>
+          Open in Chrome to share
+        </a>
       ) : (
         <button type="button" className="btn btn-gold" style={{ width: "100%", maxWidth: 340 }} onClick={share} disabled={!src}>
           <Share size={18} /> Share

@@ -234,3 +234,12 @@ img { display: block; }
 .r-dot.big { width: 13px; height: 13px; left: calc(50% + 30px); bottom: -17px; }
 .r-dot.small { width: 7px; height: 7px; left: calc(50% + 24px); bottom: -29px; }
 @media (prefers-reduced-motion: reduce) { .r-thought { animation: none; } .r-sheet { transition: none; } }
+
+/* Share sheet in in-app browsers: point at the card, which you press and hold to save */
+@keyframes card-hold { 0%, 100% { box-shadow: 0 0 0 2px rgba(230, 181, 71, .9), 0 20px 60px rgba(0, 0, 0, .5); } 50% { box-shadow: 0 0 0 6px rgba(230, 181, 71, .35), 0 20px 60px rgba(0, 0, 0, .5); } }
+.card-hold { animation: card-hold 1.4s ease-in-out infinite; }
+.hold-hint {
+  display: flex; align-items: center; gap: 10px; height: 54px; padding: 0 20px; border-radius: 999px;
+  font-weight: 600; font-size: 15px; animation: r-pop .4s cubic-bezier(.3, 1.4, .5, 1) both;
+}
+@media (prefers-reduced-motion: reduce) { .card-hold, .hold-hint { animation: none; } }

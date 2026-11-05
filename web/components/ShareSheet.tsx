@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { blobToBase64 } from "@/lib/image";
+import { isInAppBrowser } from "@/lib/inApp";
 import { renderShareCard } from "@/lib/shareCard";
 import type { Scan } from "@/lib/types";
 import { Close, Share } from "./icons";
@@ -13,31 +15,39 @@ interface Props {
   onClose: () => void;
 }
 
-/** The story card and one Share button: the phone's share sheet where the browser allows it, else a download. */
+/**
+ * The story card and one Share button: the phone's share sheet where the browser allows it, else a download.
+ * In app browsers (Instagram, Facebook…) neither works, so Share asks you to press and hold the card to save it.
+ */
 export default function ShareSheet({ scan, photoUrl, showVerdict, onClose }: Props) {
   const [file, setFile] = useState<File | null>(null);
-  const [url, setUrl] = useState<string | null>(null);
+  // A data: URL rather than a blob: URL, so press-and-hold "Save image" works in in-app browsers too.
+  const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const [holdHint, setHoldHint] = useState(false);
 
   useEffect(() => {
-    let objectUrl: string | null = null;
+    let live = true;
+    setHoldHint(false);
     renderShareCard(scan, photoUrl, window.location.host, { showVerdict })
-      .then((blob) => {
-        objectUrl = URL.createObjectURL(blob);
-        setFile(new File([blob], `drippy-${scan.overall ?? "fit"}.jpg`, { type: blob.type || "image/jpeg" }));
-        setUrl(objectUrl);
+      .then(async (blob) => {
+        const type = blob.type || "image/jpeg";
+        const dataUrl = `data:${type};base64,${await blobToBase64(blob)}`;
+        if (!live) return;
+        setFile(new File([blob], `drippy-${scan.overall ?? "fit"}.jpg`, { type }));
+        setSrc(dataUrl);
       })
       .catch((err) => {
         console.error("share card failed", err);
-        setFailed(true);
+        if (live) setFailed(true);
       });
     return () => {
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      live = false;
     };
   }, [scan, photoUrl, showVerdict]);
 
   async function share() {
-    if (!file || !url) return;
+    if (!file || !src) return;
     const canShareFile = typeof navigator.canShare === "function" && navigator.canShare({ files: [file] });
     if (canShareFile) {
       try {
@@ -47,9 +57,13 @@ export default function ShareSheet({ scan, photoUrl, showVerdict, onClose }: Pro
         if ((err as DOMException)?.name === "AbortError") return; // closed the share sheet
       }
     }
-    // No file sharing here (e.g. Instagram's in-app browser on Android): save the image instead.
+    if (isInAppBrowser()) {
+      // Instagram's browser can't share or download files, but it can save a pressed-and-held image.
+      setHoldHint(true);
+      return;
+    }
     const a = document.createElement("a");
-    a.href = url;
+    a.href = src;
     a.download = file.name;
     document.body.appendChild(a);
     a.click();
@@ -62,10 +76,10 @@ export default function ShareSheet({ scan, photoUrl, showVerdict, onClose }: Pro
         <Close />
       </button>
 
-      <div style={{ height: "min(64vh, 580px)", aspectRatio: "9 / 16", borderRadius: 20, overflow: "hidden", background: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }}>
-        {url ? (
+      <div className={holdHint ? "card-hold" : undefined} style={{ height: "min(64vh, 580px)", aspectRatio: "9 / 16", borderRadius: 20, overflow: "hidden", background: "var(--surface)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 20px 60px rgba(0,0,0,0.5)" }}>
+        {src ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt="Your Drippy story card" style={{ width: "100%", height: "100%" }} />
+          <img src={src} alt="Your Drippy story card" style={{ width: "100%", height: "100%", WebkitTouchCallout: "default", userSelect: "auto" }} />
         ) : failed ? (
           <span className="muted" style={{ fontSize: 14 }}>Couldn&apos;t make your card.</span>
         ) : (
@@ -73,9 +87,18 @@ export default function ShareSheet({ scan, photoUrl, showVerdict, onClose }: Pro
         )}
       </div>
 
-      <button type="button" className="btn btn-gold" style={{ width: "100%", maxWidth: 340 }} onClick={share} disabled={!url}>
-        <Share size={18} /> Share
-      </button>
+      {holdHint ? (
+        <div className="glass-dark hold-hint" role="status">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V11m0-1.5a1.5 1.5 0 0 1 3 0V11m0-.5a1.5 1.5 0 0 1 3 0v3.5a6 6 0 0 1-6 6h-.6a6 6 0 0 1-4.9-2.5L4.2 14a1.5 1.5 0 0 1 2.4-1.8L9 15" />
+          </svg>
+          Press and hold the card to save it
+        </div>
+      ) : (
+        <button type="button" className="btn btn-gold" style={{ width: "100%", maxWidth: 340 }} onClick={share} disabled={!src}>
+          <Share size={18} /> Share
+        </button>
+      )}
     </div>
   );
 }

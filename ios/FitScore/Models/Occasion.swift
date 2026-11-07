@@ -2,12 +2,13 @@ import Foundation
 
 /// Must match OCCASIONS in supabase/functions/score-fit/prompt.ts.
 enum Occasion: String, Codable, CaseIterable, Identifiable {
-    case work, formal, wedding, party, date, casual, festive, gym
+    case diwali, work, formal, wedding, party, date, casual, festive, gym
 
     var id: String { rawValue }
 
     var label: String {
         switch self {
+        case .diwali: "Diwali"
         case .work: "Work"
         case .formal: "Interview"
         case .wedding: "Wedding"
@@ -21,6 +22,7 @@ enum Occasion: String, Codable, CaseIterable, Identifiable {
 
     var emoji: String {
         switch self {
+        case .diwali: "🪔"
         case .work: "💼"
         case .formal: "👔"
         case .wedding: "💍"

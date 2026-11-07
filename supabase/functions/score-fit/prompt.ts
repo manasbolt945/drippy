@@ -8,6 +8,7 @@ export const OCCASIONS = [
   { id: "casual", label: "Casual / Brunch", look: "relaxed, comfortable, put-together" },
   { id: "festive", label: "Festive / Traditional", look: "ethnic or traditional wear, rich colors, festive detailing" },
   { id: "gym", label: "Gym / Athleisure", look: "functional activewear, sneakers, athleisure" },
+  { id: "diwali", label: "Diwali", look: "festive Indian ethnic or fusion wear (kurtas, sherwanis, Nehru jackets, sarees, lehengas, anarkalis), rich jewel tones, gold, zari or mirror work; celebratory and polished for pujas and family visits" },
 ] as const;
 
 export type OccasionId = (typeof OCCASIONS)[number]["id"];

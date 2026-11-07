@@ -26,12 +26,12 @@ export default function Preview({ photoUrl, occasion, onOccasion, onRate, onReta
         <label style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, fontSize: 14 }}>
           <span style={{ color: "#D9D9DE" }}>Headed to:</span>
           <select
-            className="select-pill"
+            className={`select-pill${occasion === "diwali" ? " glow" : ""}`}
             value={occasion ?? ""}
             onChange={(e) => onOccasion((e.target.value || null) as OccasionId | null)}
           >
             <option value="">Anywhere</option>
-            {OCCASIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+            {OCCASIONS.map((o) => <option key={o.id} value={o.id}>{o.featured ? `🪔 ${o.label}` : o.label}</option>)}
           </select>
         </label>
         <button type="button" className="btn btn-gold" style={{ height: 58, fontSize: 18 }} onClick={onRate}>

@@ -153,7 +153,8 @@ export default function Camera({ occasion, onOccasion, onPhoto, onUpload, onHist
               Anywhere
             </button>
             {OCCASIONS.map((o) => (
-              <button key={o.id} type="button" role="radio" aria-checked={occasion === o.id} className={`chip${occasion === o.id ? " on" : ""}`} onClick={() => onOccasion(o.id)}>
+              <button key={o.id} type="button" role="radio" aria-checked={occasion === o.id} className={`chip${o.featured ? " glow" : ""}${occasion === o.id ? " on" : ""}`} onClick={() => onOccasion(o.id)}>
+                {o.featured && <Diya />}
                 {o.label}
               </button>
             ))}
@@ -175,5 +176,15 @@ export default function Camera({ occasion, onOccasion, onPhoto, onUpload, onHist
         </div>
       </div>
     </div>
+  );
+}
+
+/** A little diya (oil lamp) for the Diwali chip. */
+function Diya() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden="true">
+      <path className="diya-flame" d="M12 2.5c1.9 2.3 2.7 3.9 2.7 5.4A2.7 2.7 0 0 1 12 10.6a2.7 2.7 0 0 1-2.7-2.7c0-1.5.8-3.1 2.7-5.4z" fill="#FFB547" />
+      <path d="M2.5 12.5h19c-.7 4.2-4.6 7.5-9.5 7.5s-8.8-3.3-9.5-7.5z" fill="currentColor" />
+    </svg>
   );
 }

@@ -20,6 +20,7 @@ export function sampleScan(occasionHint: OccasionId | null): Scan {
       { occasion: "formal", score: 68, reason: "Olive undercuts the shirt. Charcoal trousers would look boardroom-ready." },
       { occasion: "party", score: 61, reason: "Safe colors. A bolder layer or accessory would help it stand out." },
       { occasion: "wedding", score: 58, reason: "Too plain for a celebration. Add a blazer and dress shoes." },
+      { occasion: "diwali", score: 47, reason: "Neat, but Diwali calls for richer color, like a silk kurta or a festive jacket." },
       { occasion: "festive", score: 42, reason: "Missing the color and detail festive wear calls for." },
       { occasion: "gym", score: 12, reason: "A button-up and trousers are not made for working out." },
     ],

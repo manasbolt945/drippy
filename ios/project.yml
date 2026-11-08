@@ -8,6 +8,9 @@ packages:
   Supabase:
     url: https://github.com/supabase/supabase-swift
     from: 2.55.5
+  PostHog:
+    url: https://github.com/PostHog/posthog-ios.git
+    from: 3.59.3
 configFiles:
   Debug: Config/Secrets.xcconfig
   Release: Config/Secrets.xcconfig
@@ -18,6 +21,7 @@ targets:
     sources: [FitScore]
     dependencies:
       - package: Supabase
+      - package: PostHog
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: app.fitscore.FitScore
@@ -40,3 +44,5 @@ targets:
         SupabaseURL: $(SUPABASE_URL)
         SupabaseAnonKey: $(SUPABASE_ANON_KEY)
         FacebookAppID: $(FACEBOOK_APP_ID)
+        PostHogProjectToken: $(POSTHOG_PROJECT_TOKEN)
+        PostHogHost: $(POSTHOG_HOST)

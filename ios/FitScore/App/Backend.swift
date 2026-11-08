@@ -1,4 +1,5 @@
 import Foundation
+import PostHog
 import Supabase
 
 /// Shared Supabase client and the JSON decoder for rows coming back from Postgres.
@@ -33,15 +34,21 @@ final class SessionModel {
 
     func signInIfNeeded() async {
         do {
-            _ = try await Backend.client.auth.session
+            let session = try await Backend.client.auth.session
+            identify(session.user.id)
             isSignedIn = true
         } catch {
             do {
-                try await Backend.client.auth.signInAnonymously()
+                let session = try await Backend.client.auth.signInAnonymously()
+                identify(session.user.id)
                 isSignedIn = true
             } catch {
                 self.error = "Couldn't connect. Check your internet connection."
             }
         }
+    }
+
+    private func identify(_ userID: UUID) {
+        PostHogSDK.shared.identify(userID.uuidString)
     }
 }

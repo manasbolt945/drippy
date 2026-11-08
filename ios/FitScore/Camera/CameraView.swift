@@ -1,4 +1,5 @@
 import PhotosUI
+import PostHog
 import SwiftUI
 
 /// Home screen: full-screen camera, Snapchat-style.
@@ -31,6 +32,7 @@ struct CameraView: View {
             Task {
                 if let data = try? await item.loadTransferable(type: Data.self), let image = UIImage(data: data) {
                     photo = CapturedPhoto(image: image)
+                    PostHogSDK.shared.capture("photo_selected", properties: ["source": "photo_library"])
                 }
                 pickerItem = nil
             }
@@ -65,7 +67,10 @@ struct CameraView: View {
 
     private var topBar: some View {
         HStack {
-            CircleButton(systemImage: "clock.arrow.circlepath") { showHistory = true }
+            CircleButton(systemImage: "clock.arrow.circlepath") {
+                showHistory = true
+                PostHogSDK.shared.capture("history_opened")
+            }
             Spacer()
             Text("FitScore").font(.headline.weight(.heavy)).shadow(radius: 4)
             Spacer()
@@ -106,6 +111,7 @@ struct CameraView: View {
             defer { isCapturing = false }
             if let image = try? await camera.capture() {
                 photo = CapturedPhoto(image: image)
+                PostHogSDK.shared.capture("photo_selected", properties: ["source": "camera"])
             }
         }
     }

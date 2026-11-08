@@ -1,3 +1,4 @@
+import PostHog
 import SwiftUI
 
 /// Hero score, best-for occasions, full occasion breakdown, tips, and share actions.
@@ -113,6 +114,7 @@ struct ResultView: View {
         VStack(alignment: .leading, spacing: 10) {
             Button {
                 withAnimation { showAllOccasions.toggle() }
+                PostHogSDK.shared.capture("occasion_breakdown_toggled", properties: ["is_expanded": showAllOccasions])
             } label: {
                 HStack {
                     sectionTitle("Every occasion")
@@ -157,7 +159,11 @@ struct ResultView: View {
         if let shareCard {
             VStack(spacing: 12) {
                 PrimaryButton(title: "Share to Instagram Story", systemImage: "camera.circle.fill") {
-                    if !ShareService.shareToInstagramStories(shareCard) { instagramMissing = true }
+                    if ShareService.shareToInstagramStories(shareCard) {
+                        PostHogSDK.shared.capture("instagram_story_shared")
+                    } else {
+                        instagramMissing = true
+                    }
                 }
                 ShareLink(
                     item: Image(uiImage: shareCard),
@@ -169,6 +175,9 @@ struct ResultView: View {
                         .padding(.vertical, 16)
                         .background(.white.opacity(0.12), in: Capsule())
                 }
+                .simultaneousGesture(TapGesture().onEnded {
+                    PostHogSDK.shared.capture("share_sheet_opened")
+                })
             }
         }
     }

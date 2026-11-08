@@ -47,6 +47,7 @@ npx supabase@3.0.0 secrets set FREE_DAILY_SCANS=10 MAX_DAILY_ATTEMPTS=30
 3. **Environment Variables**:
    - `NEXT_PUBLIC_SUPABASE_URL` = `https://<ref>.supabase.co`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` = the publishable / anon key
+   - Optional, for analytics: `NEXT_PUBLIC_POSTHOG_KEY` and `NEXT_PUBLIC_POSTHOG_HOST` (see section 7)
 4. **Deploy.** You get a URL like `https://drippy-xyz.vercel.app`. Every push to `main` redeploys automatically.
 
 ## 5. Lock it down and test
@@ -100,3 +101,34 @@ from scans order by created_at desc limit 20;
 select user_id, count(*) as scans, round(avg(overall)) as avg_score
 from scans where created_at > now() - interval '1 day' group by 1 order by 2 desc;
 ```
+
+## 7. Analytics
+
+Two tools, both free at pilot scale. Neither uses cookies, and neither ever sees photos.
+
+**Vercel Web Analytics (visits).** Real visitors, page views, referrers (e.g. Instagram), countries and devices.
+Turn it on once: Vercel → project → **Analytics** tab → **Enable**. The `<Analytics />` tag is already in `web/app/layout.tsx`. Until it's enabled, that tab shows a "Demo Data" sample chart, which is not your traffic.
+
+**PostHog (daily users and the funnel).** Off until its key is set.
+1. Sign up at https://posthog.com (pick US or EU cloud) → create a project → copy the **Project API key** (starts with `phc_`, safe to be public).
+2. Vercel → project → **Settings → Environment Variables**:
+   - `NEXT_PUBLIC_POSTHOG_KEY` = `phc_…`
+   - `NEXT_PUBLIC_POSTHOG_HOST` = `https://us.i.posthog.com` (or `https://eu.i.posthog.com`)
+3. **Redeploy** (Deployments → ⋯ → Redeploy), since `NEXT_PUBLIC_` values are baked in at build time.
+
+Events sent (from `web/lib/analytics.ts`); each person is identified by their Supabase user id, so PostHog users match `scans.user_id`:
+
+| Event | Properties |
+|---|---|
+| `$pageview` | (automatic) |
+| `welcome_started` | `via`: camera / upload |
+| `photo_added` | `source`: camera / upload |
+| `scan_requested` | `occasion` |
+| `scan_scored` | `occasion`, `overall` |
+| `scan_not_scorable` | `occasion` |
+| `scan_failed` | `kind`: limit / busy / failed / network |
+| `share_opened` | `occasion` |
+| `share_completed` | `method`: share_sheet / download / hold_to_save |
+| `history_opened` | `from` |
+
+Useful PostHog insights: **Trends** → `$pageview`, unique users, daily (daily users); **Funnel** → `$pageview` → `photo_added` → `scan_scored` → `share_completed`; **Retention** → `scan_scored` returning.

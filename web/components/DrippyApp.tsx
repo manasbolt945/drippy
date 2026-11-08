@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { track } from "@/lib/analytics";
 import { DEMO_MODE, ScoreError, scoreFit } from "@/lib/backend";
 import { normalizePhoto } from "@/lib/image";
 import { escapeInAppBrowserOnce } from "@/lib/inApp";
@@ -70,7 +71,8 @@ export default function DrippyApp() {
     }
   };
 
-  const takePhoto = useCallback(async (raw: Blob) => {
+  const takePhoto = useCallback(async (raw: Blob, source: "camera" | "upload") => {
+    track("photo_added", { source });
     try {
       const blob = await normalizePhoto(raw);
       setPhoto({ blob, url: URL.createObjectURL(blob) });
@@ -86,9 +88,11 @@ export default function DrippyApp() {
   const rate = useCallback(async () => {
     if (!photo) return;
     setView({ name: "scanning" });
+    track("scan_requested", { occasion });
     try {
       const scan = await scoreFit(photo.blob, occasion);
       if (scan.status === "scored") {
+        track("scan_scored", { occasion, overall: scan.overall ?? null });
         // Let the mascot celebrate for a moment before the score appears.
         setFinishing(true);
         const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -96,9 +100,11 @@ export default function DrippyApp() {
         setFinishing(false);
         setView({ name: "result", scan, photoUrl: photo.url });
       } else {
+        track("scan_not_scorable", { occasion });
         setView({ name: "notScorable", message: scan.message || "We need your outfit, top to shoes, to give you a score." });
       }
     } catch (err) {
+      track("scan_failed", { kind: err instanceof ScoreError ? err.kind : "failed" });
       setView({ name: "error", error: err instanceof ScoreError ? err : new ScoreError("failed", "Something went wrong. Please try again.") });
     }
   }, [occasion, photo]);
@@ -113,14 +119,14 @@ export default function DrippyApp() {
     case "welcome":
       screen = (
         <Welcome
-          onStart={() => { markWelcomed(); setView({ name: "camera" }); }}
-          onUpload={() => { markWelcomed(); setView({ name: "camera" }); openPicker(); }}
+          onStart={() => { track("welcome_started", { via: "camera" }); markWelcomed(); setView({ name: "camera" }); }}
+          onUpload={() => { track("welcome_started", { via: "upload" }); markWelcomed(); setView({ name: "camera" }); openPicker(); }}
         />
       );
       break;
     case "camera":
       screen = (
-        <Camera occasion={occasion} onOccasion={setOccasion} onPhoto={takePhoto} onUpload={openPicker} onHistory={() => setView({ name: "history" })} />
+        <Camera occasion={occasion} onOccasion={setOccasion} onPhoto={(blob) => takePhoto(blob, "camera")} onUpload={openPicker} onHistory={() => { track("history_opened", { from: "camera" }); setView({ name: "history" }); }} />
       );
       break;
     case "preview":
@@ -132,7 +138,7 @@ export default function DrippyApp() {
     case "result":
       screen = (
         <>
-          <Result scan={view.scan} photoUrl={view.photoUrl} onClose={toCamera} onShare={setSharing} />
+          <Result scan={view.scan} photoUrl={view.photoUrl} onClose={toCamera} onShare={(o) => { track("share_opened", { occasion: o }); setSharing(o); }} />
           {DEMO_MODE && view.scan.model === "demo" && (
             <div style={{ position: "absolute", top: "calc(68px + var(--safe-top))", left: "50%", transform: "translateX(-50%)", padding: "6px 12px", borderRadius: 999, background: "rgba(7,11,26,0.7)", border: "1px solid var(--gold)", color: "var(--gold-text)", fontSize: 12, fontWeight: 600, whiteSpace: "nowrap" }}>
               Sample result · backend not connected
@@ -160,7 +166,7 @@ export default function DrippyApp() {
         <Notice
           title={limit ? "That's all for today" : "Something went wrong"}
           message={view.error.message}
-          primary={limit ? { label: "See your fits", onClick: () => setView({ name: "history" }) } : photo ? { label: "Try again", onClick: rate } : { label: "Back to camera", onClick: toCamera }}
+          primary={limit ? { label: "See your fits", onClick: () => { track("history_opened", { from: "limit" }); setView({ name: "history" }); } } : photo ? { label: "Try again", onClick: rate } : { label: "Back to camera", onClick: toCamera }}
           secondary={limit ? undefined : { label: "Back to camera", onClick: toCamera }}
           onClose={toCamera}
         />
@@ -186,7 +192,7 @@ export default function DrippyApp() {
         onChange={(e) => {
           const file = e.target.files?.[0];
           e.target.value = "";
-          if (file) takePhoto(file);
+          if (file) takePhoto(file, "upload");
         }}
       />
     </main>

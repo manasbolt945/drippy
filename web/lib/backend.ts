@@ -1,4 +1,5 @@
 import { createClient, FunctionsHttpError, type SupabaseClient } from "@supabase/supabase-js";
+import { identify } from "./analytics";
 import { blobToBase64, thumbnailDataUrl } from "./image";
 import type { OccasionId } from "./occasions";
 import { sampleScan } from "./sample";
@@ -27,9 +28,13 @@ function supabase(): SupabaseClient {
 /** Every visitor gets an anonymous account on first use, so their scans stay theirs. */
 async function ensureSession(): Promise<void> {
   const { data } = await supabase().auth.getSession();
-  if (data.session) return;
-  const { error } = await supabase().auth.signInAnonymously();
+  if (data.session) {
+    identify(data.session.user.id);
+    return;
+  }
+  const { data: signedIn, error } = await supabase().auth.signInAnonymously();
   if (error) throw new ScoreError("network", "We couldn't connect. Check your internet and try again.");
+  if (signedIn.user) identify(signedIn.user.id);
 }
 
 export async function scoreFit(photo: Blob, occasionHint: OccasionId | null): Promise<Scan> {

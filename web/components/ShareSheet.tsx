@@ -1,5 +1,6 @@
 "use client";
 
+import { track } from "@/lib/analytics";
 import { useEffect, useState } from "react";
 import { blobToBase64 } from "@/lib/image";
 import { chromeIntentUrl, isAndroid, isInAppBrowser } from "@/lib/inApp";
@@ -58,6 +59,7 @@ export default function ShareSheet({ scan, photoUrl, occasion, onClose }: Props)
     if (canShareFile) {
       try {
         await navigator.share({ files: [file], text: `My fit scored ${hero.value}${hero.occasion ? ` for ${occasionLabel(hero.occasion)}` : ""} on Drippy. What's yours? ${window.location.origin}` });
+        track("share_completed", { method: "share_sheet", occasion: hero.occasion ?? null });
         return;
       } catch (err) {
         if ((err as DOMException)?.name === "AbortError") return; // closed the share sheet
@@ -65,6 +67,7 @@ export default function ShareSheet({ scan, photoUrl, occasion, onClose }: Props)
     }
     if (isInAppBrowser()) {
       // Instagram's iPhone browser can't share or download files, but it can save a pressed-and-held image.
+      track("share_completed", { method: "hold_to_save", occasion: hero.occasion ?? null });
       setHoldHint(true);
       return;
     }
@@ -74,6 +77,7 @@ export default function ShareSheet({ scan, photoUrl, occasion, onClose }: Props)
     document.body.appendChild(a);
     a.click();
     a.remove();
+    track("share_completed", { method: "download", occasion: hero.occasion ?? null });
   }
 
   return (

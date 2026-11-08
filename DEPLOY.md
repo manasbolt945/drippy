@@ -131,4 +131,6 @@ Events sent (from `web/lib/analytics.ts`); each person is identified by their Su
 | `share_completed` | `method`: share_sheet / download / hold_to_save |
 | `history_opened` | `from` |
 
+The iOS app (`ios/`, not shipped yet) sends the same event names into the same PostHog project, plus `occasion_breakdown_toggled`; its share methods are `instagram_story` and a `share_opened` for the system share sheet. Filter by `$os` / `$lib` to split web from iOS.
+
 Useful PostHog insights: **Trends** → `$pageview`, unique users, daily (daily users); **Funnel** → `$pageview` → `photo_added` → `scan_scored` → `share_completed`; **Retention** → `scan_scored` returning.

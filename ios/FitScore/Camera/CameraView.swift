@@ -32,7 +32,7 @@ struct CameraView: View {
             Task {
                 if let data = try? await item.loadTransferable(type: Data.self), let image = UIImage(data: data) {
                     photo = CapturedPhoto(image: image)
-                    PostHogSDK.shared.capture("photo_selected", properties: ["source": "photo_library"])
+                    PostHogSDK.shared.capture("photo_added", properties: ["source": "upload"])
                 }
                 pickerItem = nil
             }
@@ -69,7 +69,7 @@ struct CameraView: View {
         HStack {
             CircleButton(systemImage: "clock.arrow.circlepath") {
                 showHistory = true
-                PostHogSDK.shared.capture("history_opened")
+                PostHogSDK.shared.capture("history_opened", properties: ["from": "camera"])
             }
             Spacer()
             Text("FitScore").font(.headline.weight(.heavy)).shadow(radius: 4)
@@ -111,7 +111,7 @@ struct CameraView: View {
             defer { isCapturing = false }
             if let image = try? await camera.capture() {
                 photo = CapturedPhoto(image: image)
-                PostHogSDK.shared.capture("photo_selected", properties: ["source": "camera"])
+                PostHogSDK.shared.capture("photo_added", properties: ["source": "camera"])
             }
         }
     }

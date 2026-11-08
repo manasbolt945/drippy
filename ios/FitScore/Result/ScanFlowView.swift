@@ -63,34 +63,36 @@ struct ScanFlowView: View {
     private func rate() {
         let attempt = if case .failed = phase { "retry" } else { "initial" }
         var properties: [String: Any] = ["attempt": attempt]
-        if let occasionHint { properties["occasion_hint"] = occasionHint.rawValue }
-        PostHogSDK.shared.capture("fit_rating_requested", properties: properties)
-        PostHogSDK.shared.logger?.info("fit rating requested", attributes: properties)
+        if let occasionHint { properties["occasion"] = occasionHint.rawValue }
+        PostHogSDK.shared.capture("scan_requested", properties: properties)
+        PostHogSDK.shared.logger?.info("scan requested", attributes: properties)
 
         phase = .scanning
         Task {
             do {
                 let scan = try await ScoringService.score(image, occasionHint: occasionHint)
+                // Same event names and properties as the web app, so one PostHog funnel covers both.
                 var resultProperties: [String: Any] = ["result_status": scan.status.rawValue]
-                if let occasionHint { resultProperties["occasion_hint"] = occasionHint.rawValue }
-                if scan.status == .scored { resultProperties["score"] = scan.heroScore.value }
-                PostHogSDK.shared.capture("fit_rating_completed", properties: resultProperties)
-                PostHogSDK.shared.logger?.info("fit rating completed", attributes: resultProperties)
+                if let occasionHint { resultProperties["occasion"] = occasionHint.rawValue }
+                if scan.status == .scored, let overall = scan.overall { resultProperties["overall"] = overall }
+                let event = scan.status == .scored ? "scan_scored" : "scan_not_scorable"
+                PostHogSDK.shared.capture(event, properties: resultProperties)
+                PostHogSDK.shared.logger?.info("scan completed", attributes: resultProperties)
                 withAnimation(.spring) { phase = .result(scan) }
             } catch {
                 let errorCategory = errorCategory(for: error)
-                PostHogSDK.shared.capture("fit_rating_failed", properties: ["error_category": errorCategory])
-                PostHogSDK.shared.logger?.warn("fit rating failed", attributes: ["error_category": errorCategory])
+                PostHogSDK.shared.capture("scan_failed", properties: ["kind": errorCategory])
+                PostHogSDK.shared.logger?.warn("scan failed", attributes: ["kind": errorCategory])
                 phase = .failed(error.localizedDescription)
             }
         }
     }
 
     private func errorCategory(for error: Error) -> String {
-        guard let scoringError = error as? ScoringError else { return "unknown" }
+        guard let scoringError = error as? ScoringError else { return "network" }
         switch scoringError {
-        case .dailyLimitReached: "daily_limit_reached"
-        case .aiBusy: "ai_busy"
+        case .dailyLimitReached: "limit"
+        case .aiBusy: "busy"
         case .failed: "failed"
         }
     }

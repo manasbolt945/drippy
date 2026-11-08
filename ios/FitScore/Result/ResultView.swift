@@ -160,7 +160,7 @@ struct ResultView: View {
             VStack(spacing: 12) {
                 PrimaryButton(title: "Share to Instagram Story", systemImage: "camera.circle.fill") {
                     if ShareService.shareToInstagramStories(shareCard) {
-                        PostHogSDK.shared.capture("instagram_story_shared")
+                        PostHogSDK.shared.capture("share_completed", properties: ["method": "instagram_story"])
                     } else {
                         instagramMissing = true
                     }
@@ -176,7 +176,7 @@ struct ResultView: View {
                         .background(.white.opacity(0.12), in: Capsule())
                 }
                 .simultaneousGesture(TapGesture().onEnded {
-                    PostHogSDK.shared.capture("share_sheet_opened")
+                    PostHogSDK.shared.capture("share_opened", properties: ["method": "share_sheet"])
                 })
             }
         }

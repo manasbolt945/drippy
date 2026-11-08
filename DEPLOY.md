@@ -109,7 +109,7 @@ Two tools, both free at pilot scale. Neither uses cookies, and neither ever sees
 **Vercel Web Analytics (visits).** Real visitors, page views, referrers (e.g. Instagram), countries and devices.
 Turn it on once: Vercel → project → **Analytics** tab → **Enable**. The `<Analytics />` tag is already in `web/app/layout.tsx`. Until it's enabled, that tab shows a "Demo Data" sample chart, which is not your traffic.
 
-**PostHog (daily users and the funnel).** Off until its key is set.
+**PostHog (daily users and the funnel).** Drippy's project key (project 720058, US cloud) is built into `web/lib/analytics.ts`, so production reports with no setup; local dev and demo mode send nothing. Setting the env vars below overrides it (e.g. for a different project).
 1. Sign up at https://posthog.com (pick US or EU cloud) → create a project → copy the **Project API key** (starts with `phc_`, safe to be public).
 2. Vercel → project → **Settings → Environment Variables**:
    - `NEXT_PUBLIC_POSTHOG_KEY` = `phc_…`

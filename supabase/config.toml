@@ -424,3 +424,7 @@ enabled = true
 # Rates outfit photos with Claude. Anonymous users have a JWT too, so keep JWT checks on.
 [functions.score-fit]
 verify_jwt = true
+
+# Sends "Welcome to Drippy" once per real account. Guests have JWTs but are skipped inside.
+[functions.welcome-email]
+verify_jwt = true

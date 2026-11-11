@@ -1,5 +1,6 @@
 "use client";
 
+import type { Account } from "@/lib/backend";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { OCCASIONS, type OccasionId } from "@/lib/occasions";
 import { Flash, Flip, Gallery, HistoryIcon } from "./icons";
@@ -13,9 +14,11 @@ interface Props {
   onPhoto: (photo: Blob) => void;
   onUpload: () => void;
   onHistory: () => void;
+  account: Account | null;
+  onAccount: () => void;
 }
 
-export default function Camera({ occasion, onOccasion, onPhoto, onUpload, onHistory }: Props) {
+export default function Camera({ occasion, onOccasion, onPhoto, onUpload, onHistory, account, onAccount }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [state, setState] = useState<CamState>("starting");
@@ -120,21 +123,28 @@ export default function Camera({ occasion, onOccasion, onPhoto, onUpload, onHist
 
       <div style={{ position: "absolute", left: 0, right: 0, top: 0, padding: "calc(12px + var(--safe-top)) 16px 0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <button type="button" className="icon-btn" aria-label="Your past fits" onClick={onHistory}><HistoryIcon /></button>
-        <span className="display" style={{ fontSize: 20 }}>Drippy</span>
-        {torchAvailable ? (
-          <button
-            type="button"
-            className="icon-btn"
-            aria-label={torchOn ? "Turn flash off" : "Turn flash on"}
-            aria-pressed={torchOn}
-            onClick={toggleTorch}
-            style={torchOn ? { background: "var(--gold-grad)", color: "var(--on-gold)" } : undefined}
-          >
-            <Flash />
-          </button>
-        ) : (
-          <span style={{ width: 44 }} />
-        )}
+        <span className="display" style={{ fontSize: 20, position: "absolute", left: "50%", transform: "translateX(-50%)", pointerEvents: "none" }}>Drippy</span>
+        <div style={{ display: "flex", gap: 8 }}>
+          {torchAvailable && (
+            <button
+              type="button"
+              className="icon-btn"
+              aria-label={torchOn ? "Turn flash off" : "Turn flash on"}
+              aria-pressed={torchOn}
+              onClick={toggleTorch}
+              style={torchOn ? { background: "var(--gold-grad)", color: "var(--on-gold)" } : undefined}
+            >
+              <Flash />
+            </button>
+          )}
+          {account && !account.guest ? (
+            <button type="button" className="acct-btn" aria-label="Your account" onClick={onAccount}>{(account.email ?? "D")[0]}</button>
+          ) : (
+            <button type="button" className="icon-btn" aria-label="Log in or sign up" onClick={onAccount}>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {state === "live" && (

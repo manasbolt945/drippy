@@ -1,15 +1,18 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { track } from "@/lib/analytics";
-import { DEMO_MODE, ScoreError, scoreFit } from "@/lib/backend";
+import { identify, resetAnalytics, track } from "@/lib/analytics";
+import { AuthFailure, DEMO_MODE, ScoreError, continueWithProvider, currentAccount, logOut, needsPassword, onAccountChange, scoreFit, sendWelcomeOnce, type Account, type Provider } from "@/lib/backend";
 import { normalizePhoto } from "@/lib/image";
 import { escapeInAppBrowserOnce } from "@/lib/inApp";
 import type { OccasionId } from "@/lib/occasions";
 import type { Scan } from "@/lib/types";
+import AccountSheet from "./AccountSheet";
+import AuthScreen, { type AuthMode } from "./AuthScreen";
 import Camera from "./Camera";
 import History from "./History";
 import Notice from "./Notice";
+import KeepFitsSheet from "./KeepFitsSheet";
 import Preview from "./Preview";
 import Result from "./Result";
 import Scanning from "./Scanning";
@@ -34,6 +37,19 @@ type View =
   | { name: "history" };
 
 const WELCOMED_KEY = "drippy.welcomed";
+const SCORED_KEY = "drippy.scoredCount";
+
+/** Offer "Keep your fits" to guests after their 1st score, then every 5th. */
+function shouldOfferKeepFits(): boolean {
+  let n = 0;
+  try {
+    n = Number(localStorage.getItem(SCORED_KEY) ?? "0") + 1;
+    localStorage.setItem(SCORED_KEY, String(n));
+  } catch {
+    return false;
+  }
+  return n === 1 || n % 5 === 0;
+}
 
 export default function DrippyApp() {
   const [view, setView] = useState<View>({ name: "boot" });
@@ -43,6 +59,12 @@ export default function DrippyApp() {
   const [sharing, setSharing] = useState<string | null | undefined>(undefined);
   const [splashDone, setSplashDone] = useState(false);
   const [finishing, setFinishing] = useState(false);
+  const [account, setAccount] = useState<Account | null>(null);
+  const accountRef = useRef<Account | null>(null);
+  const [auth, setAuth] = useState<{ mode: AuthMode; from: string } | null>(null);
+  const [keepFits, setKeepFits] = useState(false);
+  const [accountSheet, setAccountSheet] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const endSplash = useCallback(() => setSplashDone(true), []);
 
@@ -62,6 +84,66 @@ export default function DrippyApp() {
   useEffect(() => () => {
     if (photo) URL.revokeObjectURL(photo.url);
   }, [photo]);
+
+  const applyAccount = useCallback((next: Account | null) => {
+    accountRef.current = next;
+    setAccount(next);
+    if (next) identify(next.id);
+    // A real account (Google, or email confirmed): send "Welcome to Drippy" once.
+    if (next && !next.guest && next.email) sendWelcomeOnce(next.id).catch(() => {});
+    // Came back from the "confirm your email" link: one last step, a password.
+    if (needsPassword(next)) setAuth({ mode: "setPassword", from: "email_link" });
+  }, []);
+
+  useEffect(() => {
+    currentAccount().then(applyAccount).catch(() => {});
+    return onAccountChange((next, recovery) => {
+      applyAccount(next);
+      if (recovery) setAuth({ mode: "setPassword", from: "reset" });
+    });
+  }, [applyAccount]);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 2600);
+    return () => clearTimeout(t);
+  }, [toast]);
+
+  const openAuth = useCallback((mode: AuthMode, from: string) => {
+    track("auth_opened", { from, mode });
+    setKeepFits(false);
+    setAuth({ mode, from });
+  }, []);
+
+  const authDone = useCallback(async (how: "signed_up" | "logged_in" | "password_set") => {
+    setAuth(null);
+    setToast(how === "logged_in" ? "Welcome back" : how === "signed_up" ? "Your fits are saved" : "You're all set");
+    applyAccount(await currentAccount().catch(() => null));
+    setView((v) => (v.name === "welcome" || v.name === "boot" ? { name: "camera" } : v));
+    try {
+      localStorage.setItem(WELCOMED_KEY, "1");
+    } catch {
+      // Not critical.
+    }
+  }, [applyAccount]);
+
+  const socialLogin = useCallback(async (p: Provider, from: string) => {
+    track("auth_opened", { from, mode: p });
+    try {
+      await continueWithProvider(p); // leaves the page for the provider, then comes back signed in
+    } catch (err) {
+      setToast(err instanceof AuthFailure ? err.message : "Couldn't start that login.");
+    }
+  }, []);
+
+  const doLogOut = useCallback(async () => {
+    setAccountSheet(false);
+    track("logged_out");
+    await logOut().catch(() => {});
+    resetAnalytics();
+    applyAccount(null);
+    setToast("Logged out");
+  }, [applyAccount]);
 
   const markWelcomed = () => {
     try {
@@ -99,6 +181,14 @@ export default function DrippyApp() {
         await new Promise((r) => setTimeout(r, reduce ? 300 : 1100));
         setFinishing(false);
         setView({ name: "result", scan, photoUrl: photo.url });
+        // A guest just got a score: after a beat, offer to keep their fits.
+        const acc = accountRef.current;
+        if ((!acc || acc.guest) && shouldOfferKeepFits()) {
+          setTimeout(() => {
+            track("keep_fits_shown");
+            setKeepFits(true);
+          }, 1800);
+        }
       } else {
         track("scan_not_scorable", { occasion });
         setView({ name: "notScorable", message: scan.message || "We need your outfit, top to shoes, to give you a score." });
@@ -121,12 +211,17 @@ export default function DrippyApp() {
         <Welcome
           onStart={() => { track("welcome_started", { via: "camera" }); markWelcomed(); setView({ name: "camera" }); }}
           onUpload={() => { track("welcome_started", { via: "upload" }); markWelcomed(); setView({ name: "camera" }); openPicker(); }}
+          onLogin={() => openAuth("login", "landing")}
+          onProvider={(p) => socialLogin(p, "landing")}
         />
       );
       break;
     case "camera":
       screen = (
-        <Camera occasion={occasion} onOccasion={setOccasion} onPhoto={(blob) => takePhoto(blob, "camera")} onUpload={openPicker} onHistory={() => { track("history_opened", { from: "camera" }); setView({ name: "history" }); }} />
+        <Camera occasion={occasion} onOccasion={setOccasion} onPhoto={(blob) => takePhoto(blob, "camera")} onUpload={openPicker} onHistory={() => { track("history_opened", { from: "camera" }); setView({ name: "history" }); }}
+          account={account}
+          onAccount={() => (account && !account.guest ? setAccountSheet(true) : openAuth("login", "camera"))}
+        />
       );
       break;
     case "preview":
@@ -181,6 +276,28 @@ export default function DrippyApp() {
   return (
     <main className="app">
       {screen}
+      {keepFits && view.name === "result" && (
+        <KeepFitsSheet
+          onEmail={() => openAuth("signup", "keep_fits")}
+          onProvider={(p) => socialLogin(p, "keep_fits")}
+          onLater={() => { track("keep_fits_dismissed"); setKeepFits(false); }}
+        />
+      )}
+      {accountSheet && account && (
+        <AccountSheet
+          account={account}
+          onFits={() => { setAccountSheet(false); track("history_opened", { from: "account" }); setView({ name: "history" }); }}
+          onLogOut={doLogOut}
+          onClose={() => setAccountSheet(false)}
+        />
+      )}
+      {auth && <AuthScreen mode={auth.mode} from={auth.from} onClose={() => setAuth(null)} onDone={authDone} />}
+      {toast && (
+        <div className="toast" role="status">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold-text)" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12l5 5L20 7" /></svg>
+          {toast}
+        </div>
+      )}
       {!splashDone && <Splash onDone={endSplash} />}
       <input
         ref={fileInput}

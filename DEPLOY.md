@@ -134,3 +134,12 @@ Events sent (from `web/lib/analytics.ts`); each person is identified by their Su
 The iOS app (`ios/`, not shipped yet) sends the same event names into the same PostHog project, plus `occasion_breakdown_toggled`; its share methods are `instagram_story` and a `share_opened` for the system share sheet. Filter by `$os` / `$lib` to split web from iOS.
 
 Useful PostHog insights: **Trends** → `$pageview`, unique users, daily (daily users); **Funnel** → `$pageview` → `photo_added` → `scan_scored` → `share_completed`; **Retention** → `scan_scored` returning.
+
+## 8. Accounts and email
+
+Everyone starts as an anonymous guest. Signing up (name, email, password, then a 6-digit code) turns that guest into a real account with the same id, so their fits stay. Log in is email + password; Google/Apple/Facebook buttons appear only when listed in `NEXT_PUBLIC_AUTH_PROVIDERS` (Vercel env) and enabled in Supabase.
+
+- **Email sender:** Resend (domain `drippy-ai.org`), connected in Supabase → Authentication → Emails → SMTP (`smtp.resend.com`, port 465, user `resend`, sender `hello@drippy-ai.org`).
+- **Templates:** paste `supabase/templates/confirm-signup.html` (Confirm signup), `change-email.html` (Change email address, used when a guest signs up) and `reset-password.html` (Reset password) into Authentication → Emails → Templates. Email OTP length: 6.
+- **Welcome email:** the `welcome-email` function sends `welcome.html` once per real account (Google or confirmed email). It needs the Resend key as a secret: `secrets set RESEND_API_KEY=...`. Deploy with `npx supabase@3.0.0 functions deploy welcome-email --remote=<ref>`.
+- **URL configuration:** Site URL `https://drippy-ai.org`; redirect URLs for drippy-ai.org, www, the vercel.app address and localhost.

@@ -1,7 +1,9 @@
 "use client";
 
 import { useLayoutEffect, useRef, useState } from "react";
+import { PROVIDERS, type Provider } from "@/lib/backend";
 import Mascot from "./Mascot";
+import { ProviderIcon } from "./ProviderIcon";
 
 const MASCOT = 220;
 const SLOT = 34;
@@ -11,7 +13,7 @@ const RING_C = 439.8;
  * First-run screen with no headline: the mascot tells the story in three scenes (Snap → Get rated → Share)
  * inside a mirror, flying up to become the logo before "Drippy". Loops until the user allows the camera.
  */
-export default function Welcome({ onStart, onUpload }: { onStart: () => void; onUpload: () => void }) {
+export default function Welcome({ onStart, onUpload, onLogin, onProvider }: { onStart: () => void; onUpload: () => void; onLogin: () => void; onProvider: (p: Provider) => void }) {
   const slotRef = useRef<HTMLDivElement>(null);
   const mascotRef = useRef<HTMLDivElement>(null);
   const [fly, setFly] = useState({ x: 0, y: -300, k: SLOT / MASCOT });
@@ -36,9 +38,12 @@ export default function Welcome({ onStart, onUpload }: { onStart: () => void; on
       className="screen sky welcome"
       style={{ ["--fly-x" as string]: `${fly.x}px`, ["--fly-y" as string]: `${fly.y}px`, ["--fly-k" as string]: fly.k }}
     >
-      <div style={{ paddingTop: "calc(24px + var(--safe-top))", display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
+      <div style={{ position: "relative", paddingTop: "calc(24px + var(--safe-top))", display: "flex", justifyContent: "center", alignItems: "center", gap: 8 }}>
         <div ref={slotRef} className="w-slot" style={{ width: SLOT, height: SLOT }} />
         <span className="display" style={{ fontSize: 22 }}>Drippy</span>
+        <button type="button" className="icon-btn" aria-label="Log in" onClick={onLogin} style={{ position: "absolute", right: 16, bottom: -5 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg>
+        </button>
       </div>
       <div style={{ display: "flex", gap: 6, padding: "16px 24px 0" }} aria-hidden="true">
         {["w-s1", "w-s2", "w-s3"].map((c) => (
@@ -83,12 +88,23 @@ export default function Welcome({ onStart, onUpload }: { onStart: () => void; on
       <div style={{ padding: "12px 24px calc(24px + var(--safe-bottom))", display: "flex", flexDirection: "column", alignItems: "center", gap: 14 }}>
         <button type="button" className="btn btn-gold" style={{ width: "100%", height: 58 }} onClick={onStart}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
-          Allow camera
+          Rate my fit
         </button>
         <button type="button" onClick={onUpload} style={{ display: "flex", alignItems: "center", gap: 8, border: 0, background: "none", color: "var(--gold-text)", fontSize: 14, fontWeight: 600, cursor: "pointer", padding: 6 }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="3" /><circle cx="9" cy="9" r="2" /><path d="M21 15l-5-5L5 21" /></svg>
           Upload a photo
         </button>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+          <span style={{ fontSize: 13, color: "var(--muted)" }}>Have an account?</span>
+          {PROVIDERS.map((p) => (
+            <button key={p} type="button" className="provider-btn sm" aria-label={`Log in with ${p[0].toUpperCase()}${p.slice(1)}`} onClick={() => onProvider(p)}>
+              <ProviderIcon provider={p} size={18} />
+            </button>
+          ))}
+          <button type="button" className="provider-btn sm" aria-label="Log in with email" onClick={onLogin}>
+            <ProviderIcon provider="email" size={18} />
+          </button>
+        </div>
         <span style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#5A6688" }}>
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 4.4-3.4 8.2-8 9-4.6-.8-8-4.6-8-9V6z" /></svg>
           Clothes only, never faces

@@ -1,0 +1,30 @@
+// Generated from supabase/templates/welcome.html. {{FIRST_NAME}} is filled in by index.ts.
+export const WELCOME_HTML = `<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>Welcome to Drippy</title></head>
+<body style="margin:0;padding:0;background:#070b1a;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#070b1a;">
+<tr><td align="center" style="padding:32px 16px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:440px;background:#131b36;border:1px solid #3a3420;border-radius:24px;">
+<tr><td align="center" style="padding:32px 28px 8px;">
+<img src="https://drippy-ai.org/icon/192" width="72" height="72" alt="Drippy" style="display:block;border-radius:18px;">
+</td></tr>
+<tr><td align="center" style="padding:8px 28px 0;font-family:Helvetica,Arial,sans-serif;">
+<h1 style="margin:0;font-size:24px;line-height:30px;color:#f4efe3;">Welcome to Drippy{{FIRST_NAME}}</h1>
+<p style="margin:10px 0 0;font-size:15px;line-height:22px;color:#c9cfe0;">Your fits now save to your profile, on every device.</p>
+</td></tr>
+<tr><td align="center" style="padding:22px 28px 10px;">
+<a href="https://drippy-ai.org" style="display:inline-block;padding:14px 28px;border-radius:999px;background:#e6b547;color:#1a1203;font-family:Helvetica,Arial,sans-serif;font-size:16px;font-weight:bold;text-decoration:none;">Rate your next fit</a>
+</td></tr>
+<tr><td align="center" style="padding:6px 28px 4px;font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:20px;color:#98a2c0;">
+Soon: dress up your Drippy and unlock new looks as you rate.
+</td></tr>
+<tr><td align="center" style="padding:8px 28px 28px;font-family:Helvetica,Arial,sans-serif;font-size:12px;line-height:18px;color:#98a2c0;">
+Drippy · Rate your fit · <a href="https://drippy-ai.org" style="color:#f2cd6b;text-decoration:none;">drippy-ai.org</a>
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>
+`;

@@ -41,7 +41,13 @@ export type AnalyticsEvent =
   | "scan_failed"
   | "share_opened"
   | "share_completed"
-  | "history_opened";
+  | "history_opened"
+  | "auth_opened"
+  | "signed_up"
+  | "logged_in"
+  | "logged_out"
+  | "keep_fits_shown"
+  | "keep_fits_dismissed";
 
 export function track(event: AnalyticsEvent, props?: Record<string, string | number | boolean | null>): void {
   if (!started) return;
@@ -56,7 +62,20 @@ export function track(event: AnalyticsEvent, props?: Record<string, string | num
 export function identify(userId: string): void {
   if (!started) return;
   try {
-    if (posthog.get_distinct_id() !== userId) posthog.identify(userId);
+    if (posthog.get_distinct_id() === userId) return;
+    // Switching to a different account on this browser: start a fresh PostHog person first.
+    if (posthog.get_property("$user_state") === "identified") posthog.reset();
+    posthog.identify(userId);
+  } catch {
+    // ignore
+  }
+}
+
+/** After logging out: the next person on this browser starts as a new PostHog user. */
+export function resetAnalytics(): void {
+  if (!started) return;
+  try {
+    posthog.reset();
   } catch {
     // ignore
   }
